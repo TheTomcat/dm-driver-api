@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
     # app.include_router(workers.router)
     # app.include_router(shifts.router)
     # app.include_router(users.query_router)
-    # app.include_router(tags_router)
+    app.include_router(tags_router)
 
     add_pagination(app)
 
