@@ -1,4 +1,5 @@
-from sqlalchemy import String
+from sqlalchemy import VARCHAR, String
+import sqlalchemy.types as types
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing_extensions import Annotated
@@ -39,4 +40,22 @@ class Base(DeclarativeBase):
     # Generate __tablename__ automatically
     @declared_attr  # type: ignore
     def __tablename__(cls) -> str:
-        return cls.__name__.lower()
+        return cls.__name__.lower()+'s'
+    
+
+class CSV(types.TypeDecorator):
+    '''Outside of the database is a list of strings, inside is a comma delimited string
+    '''
+
+    impl = VARCHAR
+
+    cache_ok = True
+
+    def process_bind_param(self, value: list[str], dialect) -> str:
+        return ','.join(value)
+
+    def process_result_value(self, value: str, dialect) -> list[str]:
+        return value.split(',')
+
+    def copy(self, **kw):
+        return CSV(self.impl.length)

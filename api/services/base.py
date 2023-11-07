@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, Type, TypeVar
+from typing import Any, Generic, Optional, Type, TypeVar, Annotated
 
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -6,11 +6,10 @@ from pydantic import BaseModel
 from sqlalchemy import Select, delete, select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 
 from core.db import Base
-from api.models import (Directory, Image, Tag, Message)
-from api.schemas import DirectoryCreate, DirectoryUpdate, ImageCreate, ImageUpdate, TagCreate, TagUpdate, MessageCreate, MessageUpdate
+
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -64,48 +63,3 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.db_session.execute(query)
         self.db_session.commit()
 
-
-############## Image
-
-class ImageService(
-    BaseService[Image, ImageCreate, ImageUpdate]
-):
-    def __init__(self, db_session: Session):
-        super(ImageService, self).__init__(Image, db_session)
-
-class DirectoryService(
-    BaseService[Directory, DirectoryCreate, DirectoryUpdate]
-):
-    def __init__(self, db_session: Session):
-        super(DirectoryService, self).__init__(Directory, db_session)
-
-class TagService(
-    BaseService[Tag, TagCreate, TagUpdate]
-):
-    def __init__(self, db_session: Session):
-        super(TagService, self).__init__(Tag, db_session)
-    
-    def get_by_name(self, name: str) -> Optional[ModelType]:
-        tag = self.db_session.scalar(select(self.model).where(self.model.name == name.lower()))
-        if not tag:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Tag {name} not found"
-            )
-        return tag
-
-
-class MessageService(BaseService[Message, MessageCreate, MessageUpdate]):
-    def __init__(self, db_session: Session):
-        super(MessageService, self).__init__(Message, db_session)
-
-class SessionService():
-    pass
-
-class CombatService():
-    pass
-
-class EntityService():
-    pass
-
-class ParticipantService():
-    pass

@@ -36,23 +36,22 @@ def create_app() -> FastAPI:
         # # stop debug
         # return "ok"
     
+    from api.routers import tag, image, message, session, entity, combat, participant
 
-    # from api.routers import organisations, rosters, shifts, tags, users, workers
-    # from api.routes import tags_router
-    # app.include_router(users.auth_router)
-    # app.include_router(organisations.router)
-    # app.include_router(rosters.router)
-    # app.include_router(workers.router)
-    # app.include_router(shifts.router)
-    # app.include_router(users.query_router)
-    app.include_router(tags_router)
+    app.include_router(entity.router)
+    app.include_router(participant.router)
+    app.include_router(combat.router)
+    app.include_router(session.router)
+    app.include_router(message.router)
+    app.include_router(image.router)
+    app.include_router(tag.router)
 
     add_pagination(app)
 
     @app.get("/endpoints", tags=["main"])
-    async def endpoints() -> str:
-        url_list = [{"path": route.path, "name": route.name} for route in app.routes]
-        return json.dumps(url_list)
+    async def endpoints() -> list:
+        url_list = [{"path": route.path, "name": route.name, "methods": route.methods} for route in app.routes]
+        return url_list
     
     return app
 

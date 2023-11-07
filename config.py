@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 8
-    DATABASE_URL: str = "sqlite:///example.db"
+    DATABASE_URL: str = "sqlite:///db.sqlite"
 
     FIRST_SUPERUSER: str = "test@example.com"
     FIRST_SUPERUSER_PW: str = "test"

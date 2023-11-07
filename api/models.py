@@ -1,5 +1,10 @@
+import enum
+from os import PathLike
 from typing import Optional
-from core.db import Base
+
+import httpx
+from core.view import view
+from core.db import CSV, Base
 
 from sqlalchemy import Column, String, Table, ForeignKey, select
 from sqlalchemy.sql.expression import func
@@ -21,140 +26,64 @@ image_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True),
 )
 
+class ImageType(enum.Enum):
+    backdrop = 'backdrop'
+    character = 'character'
+    handout = 'handout'
+    map = 'map'
 
-class Selector(object):
-    @classmethod
-    def get_by_id_or_random(cls, id=None):
-        if id is None:
-            return cls.get_random()
-        return select(cls).where(cls.id == id)
+def hash_fn(f):
+    e = '1253467890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM'
+    return ''.join(random.choices(e,k=20))
 
-    @classmethod
-    def get_random(cls):
-        return select(cls).order_by(func.random())
-
-    @classmethod
-    def get(cls, id):
-        return select(cls).where(cls.id == id)
-
-
-def get_image_as_base64(path):
-    with open(path, "rb") as image:
-        data = base64.b64encode(image.read())
-    return data.decode("ascii")
-
-
-def get_image_thumbnail_as_base64(image: "Image", scale):
-    """scale can be a single number - in which case, scale the image up or down by that fraction,
-    or it can be a (width,height) tuple, in which case the image will be resized to fit within that bounding box
-    """
-    # if isinstance(scale, (int, float)):
-    #     aspect_ratio = scale
-    # elif isinstance(scale, (tuple, list)):
-    #     if len(scale) != 2:
-    #         raise IndexError("Scale must be a number or an iterable of length 2")
-    #     aspect_ratio = min(scale[0] / image.dimension_x, scale[1] / image.dimension_y)
-    with open(image.path, "rb") as f:
-        x, y = calculate_thumbnail_size(
-            (image.dimension_x, image.dimension_y), scale=scale
-        )
-        imdata = PImage.open(f)
-        imdata.thumbnail((x, y))
-        output = base64.b64encode(imdata.tobytes())
-        return output.decode("ascii")
-
-
-def calculate_thumbnail_size(image_dimension, **dimensions):
-    match dimensions:
-        case {"width": width, "height": height}:
-            scf = min(
-                width / image_dimension[0],
-                height / image_dimension[1],
-            )
-        case {"width": width}:
-            scf = width / image_dimension[0]
-        case {"height": height}:
-            scf = height / image_dimension[1]
-        case {"scale": scale}:
-            scf = scale
-        case _:
-            raise IndexError("Scale must be a number or an iterable of length 2")
-    return (
-        int(scf * image_dimension[0]),
-        int(scf * image_dimension[1]),
-    )
-
-
-class Image(Base, Selector):
-    __tablename__ = "images"
+class Image(Base):
+    #__tablename__ = "images"
     id: Mapped[int] = mapped_column(primary_key=True)
-    filename: Mapped[str] = mapped_column(String(30), index=True, unique=True)
-    focus_x: Mapped[int] = mapped_column(nullable=True)
-    focus_y: Mapped[int] = mapped_column(nullable=True)
+    path: Mapped[str] = mapped_column(String(256), index=True)
+    name: Mapped[str] = mapped_column(String(100), index=True)
+    focus_x: Mapped[int] = mapped_column(nullable=True, default=-1)
+    focus_y: Mapped[int] = mapped_column(nullable=True, default=-1)
     hash: Mapped[str] = mapped_column(String(20), index=True)
     dimension_x: Mapped[int]
     dimension_y: Mapped[int]
     tags: Mapped[list["Tag"]] = relationship(
         back_populates="images", secondary=image_tags
     )
-    directory_id: Mapped[int] = mapped_column(ForeignKey("directories.id"))
-    directory: Mapped["Directory"] = relationship(back_populates="images")
-    # attribution: Mapped[str] = mapped_column(String(300), nullable=True)
+    type: Mapped[ImageType] = mapped_column(default=ImageType.backdrop)
 
-    def get_fullsize_image_data_base64(self, base_path=None):
-        if base_path is not None:
-            raise DeprecationWarning("BasePath should not be used")
-        return get_image_as_base64(Path(self.directory.path, self.filename))
+    @classmethod
+    def create_from_local_file(cls, path: PathLike, **kwargs) -> 'Image':
+        with PImage.open(path) as f:
+            (x,y) = f.size
+            imhash = hash_fn(f)
+        i = cls(path=str(path), name=path.stem, **kwargs, dimension_x=x, dimension_y=y, hash=imhash)
+        return i
+    
+    @classmethod
+    def create_from_uri(cls, uri: str, **kwargs) -> 'Image':
+        response = httpx.get(uri)
+        with PImage.open(response) as f:
+            (x,y) = f.size
+            imhash = hash_fn(f)
+        i = cls(path=uri, **kwargs, dimension_x=x, dimension_y=y, hash=imhash)
+        return i
+    
 
-    def get_thumbnail_image_data_base64(self, base_path=None):
-        if base_path is not None:
-            raise DeprecationWarning("BasePath should not be used")
-        # return get_image_as_base64(base_path + "thumbnails\\" + self.filename)
-        return get_image_thumbnail_as_base64(self, (300, 300))
-
-    @property
-    def path(self):
-        return Path(self.directory.path, self.filename)
-
-    # @property
-    # def url(self):
-    #     return url_for("api.get_fullsize_image", image_id=self.id)
-
-    # @property
-    # def url_thumbnail(self):
-    #     return url_for("api.get_thumbnail_image", image_id=self.id)
-
-    def to_json(self):
-        return {
-            "image_id": self.id,
-            "filename": self.filename,
-            "dimensions": (self.dimension_x, self.dimension_y),
-            "url": self.url,
-            "thumbnail": self.url_thumbnail,
-        }
-
-
-class Directory(Base):
-    __tablename__ = "directories"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    path: Mapped[str] = mapped_column(String(256), index=True, unique=True)
-    images: Mapped[list["Image"]] = relationship(back_populates="directory")
-
-
-class Tag(Base, Selector):
-    __tablename__ = "tags"
+class Tag(Base):
+    #__tablename__ = "tags"
     id: Mapped[int] = mapped_column(primary_key=True)
     tag: Mapped[str] = mapped_column(String(30))
     images: Mapped[list["Image"]] = relationship(
         back_populates="tags", secondary=image_tags
     )
 
-    def to_json(self):
-        return {"tag_id": self.id, "tag": self.tag}
+    def __init__(self, tag: str):
+        self.tag = tag.lower()
+        super(Tag).__init__()
 
 
 class Message(Base):
-    __tablename__ = "messages"
+    #__tablename__ = "messages"
     id: Mapped[int] = mapped_column(primary_key=True)
     message: Mapped[str] = mapped_column(String(400))
 
@@ -162,12 +91,8 @@ class Message(Base):
     def get_random(cls):
         return select(cls).order_by(func.random())
 
-    def to_json(self):
-        return {"message_id": self.id, "message": self.message}
-
-
 class Session(Base):
-    __tablename__ = "sessions"
+    #__tablename__ = "sessions"
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(100), insert_default="")
     image_id: Mapped[int] = mapped_column(ForeignKey("images.id"))
@@ -175,37 +100,15 @@ class Session(Base):
     message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"))
     message: Mapped["Message"] = relationship("Message")
 
-    def to_json(self):
-        return {
-            "session_id": self.id,
-            "title": self.title,
-            "message_id": self.message_id,
-            "image_id": self.image_id,
-        }
 
-
-class Combat(Base, Selector):
+class Combat(Base):
     __tablename__ = "combat"
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(100), insert_default="")
     participants: Mapped[list["Participant"]] = relationship(back_populates="combat")
 
-    def to_json(self):
-        return {
-            "combat_id": self.id,
-            "title": self.title,
-            "participants": [
-                participant.to_json() for participant in self.participants
-            ],
-            #             "participants": {
-            #     participant.id: participant.to_json()
-            #     for participant in self.participants
-            # },
-        }
-
-
-class Participant(Base, Selector):
-    __tablename__ = "participants"
+class Participant(Base):
+    #__tablename__ = "participants"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), insert_default="")
     combat_id: Mapped[int] = mapped_column(ForeignKey("combat.id"))
@@ -230,26 +133,7 @@ class Participant(Base, Selector):
     )
     image: Mapped[Optional[Image]] = relationship("Image")
 
-    def to_json(self):
-        return {
-            "participant_id": self.id,
-            "combat_id": self.combat_id,
-            "entity_id": self.entity_id,
-            "name": self.name,
-            "is_visible": self.is_visible,
-            "damage": self.damage,
-            "max_hp": self.max_hp,
-            "ac": self.ac,
-            "initiative": self.initiative,
-            "initiative_modifier": self.initiative_modifier,
-            "conditions": self.conditions.split(","),
-            "has_reaction": self.has_reaction,
-            "colour": self.colour,
-            "image_id": self.image_id,
-        }
-
-
-class Entity(Base, Selector):
+class Entity(Base):
     __tablename__ = "entities"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), insert_default="")
@@ -266,20 +150,6 @@ class Entity(Base, Selector):
     source: Mapped[str] = mapped_column(String(10), nullable=True)
     source_page: Mapped[int] = mapped_column(nullable=True)
 
-    def to_json(self):
-        return {
-            "entity_id": self.id,
-            "name": self.name,
-            "hit_dice": self.hit_dice,
-            "ac": self.ac,
-            "cr": self.cr,
-            "initiative_modifier": self.initiative_modifier,
-            "is_PC": self.is_PC,
-            "image_id": self.image_id,
-            "source": self.source,
-            "source_page": self.source_page,
-            "data": self.data,
-        }
 
 
 class Focus:
