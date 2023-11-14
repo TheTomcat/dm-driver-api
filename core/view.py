@@ -3,6 +3,8 @@ from sqlalchemy.ext import compiler
 from sqlalchemy.schema import DDLElement
 from sqlalchemy.sql import table
 
+# Adapted from https://github.com/sqlalchemy/sqlalchemy/wiki/Views, but I couldn't make it work properly
+
 
 class CreateView(DDLElement):
     def __init__(self, name, selectable):
@@ -36,19 +38,15 @@ def view_doesnt_exist(ddl, target, connection, **kw):
     return not view_exists(ddl, target, connection, **kw)
 
 
-def view(name, metadata, selectable):
+def view(name: str, metadata: sa.MetaData, selectable: sa.Select):
     t = table(name)
 
-    t._columns._populate_separate_keys(
-        col._make_proxy(t) for col in selectable.selected_columns
-    )
+    t._columns._populate_separate_keys(col._make_proxy(t) for col in selectable.selected_columns)
 
-    sa.event.listen(
+    sa.event.listen(  # type: ignore
         metadata,
         "after_create",
-        CreateView(name, selectable).execute_if(callable_=view_doesnt_exist),
+        CreateView(name, selectable).execute_if(callable_=view_doesnt_exist),  # type: ignore
     )
-    sa.event.listen(
-        metadata, "before_drop", DropView(name).execute_if(callable_=view_exists)
-    )
+    sa.event.listen(metadata, "before_drop", DropView(name).execute_if(callable_=view_exists))  # type: ignore
     return t

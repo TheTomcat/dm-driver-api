@@ -6,6 +6,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from config import get_settings
+
 # from api.logger import logger
 
 
@@ -15,16 +16,12 @@ def get_engine() -> Engine:
     if settings.PROFILE_QUERIES:
 
         @event.listens_for(Engine, "before_cursor_execute")
-        def before_cursor_execute(
-            conn, cursor, statement, parameters, context, executemany
-        ):
+        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
             conn.info.setdefault("query_start_time", []).append(time.time())
             # logger.debug(f"Start Query {statement}")
 
         @event.listens_for(Engine, "after_cursor_execute")
-        def after_cursor_execute(
-            conn, cursor, statement, parameters, context, executemany
-        ):
+        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
             total = time.time() - conn.info["query_start_time"].pop(-1)
             # logger.debug("Query Complete!")
             # logger.debug(f"Total time: {total}")
@@ -36,9 +33,7 @@ def get_engine() -> Engine:
 @lru_cache
 def create_session() -> scoped_session:
     engine = get_engine()
-    Session = scoped_session(
-        sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    )
+    Session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
     return Session
 
 

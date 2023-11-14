@@ -1,11 +1,12 @@
 #!/usr/local/bin/python3
 
 import glob
-from PIL import Image
+from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
-from functools import partial
 from timeit import default_timer as timer
+
+from PIL import Image
 
 
 def generate_thumbnail(filename, zoom, outputdir="thumbnails"):

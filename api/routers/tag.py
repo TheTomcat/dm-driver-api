@@ -1,32 +1,35 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
-from fastapi import Depends, Response, status
-from fastapi.routing import APIRouter
+from fastapi import APIRouter, Depends, Response
 from fastapi_pagination import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from core.db import foreign_key
 from api.schemas import (
     Tag,
     TagCreate,
+    TagFilter,
     TagUpdate,
 )
-from api.services import get_tag_service
+
 # from api.db.schemas.filters import TagFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
-from api.services import TagService
+from api.services import TagService, get_tag_service
+from api.utils.filters import generate_filter_query
+from core.db import foreign_key
 
 router = APIRouter(prefix="/tag")
+
 
 @router.get("/", response_model=Page[Tag], tags=["tags"])
 async def list_tags(
     tag_service: Annotated[TagService, Depends(get_tag_service)],
-    # tag_filter: Annotated[TagFilter, Depends()],
+    tag_filter: Annotated[TagFilter, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Tag]:
     "Get all tags"
-    return tag_service.get_all()
+    q = generate_filter_query(models.Tag, tag_filter)
+    return tag_service.get_some(q)
 
 
 @router.get(
@@ -39,7 +42,7 @@ async def get_tag(
     tag_id: foreign_key,
     tag_service: Annotated[TagService, Depends(get_tag_service)],
     # current_user: CurrentActiveUser,
-) -> Optional[Tag]:
+) -> models.Tag:
     "Get a single tag by id"
     return tag_service.get(tag_id)
 

@@ -1,23 +1,19 @@
 import enum
-from os import PathLike
+import math
+import pathlib
+import random
 from typing import Optional
 
 import httpx
-from core.view import view
-from core.db import CSV, Base
-
-from sqlalchemy import Column, String, Table, ForeignKey, select
-from sqlalchemy.sql.expression import func
+from fastapi import HTTPException
+from PIL import Image as PImage
+from PIL import UnidentifiedImageError
+from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import BLOB
-# from flask import url_for
-from typing_extensions import Annotated
 
-import base64
-import math
-import random
-from PIL import Image as PImage
-from pathlib import Path
+from core.db import Base
+from core.utils import roll
 
 image_tags = Table(
     "image_tags",
@@ -26,18 +22,36 @@ image_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True),
 )
 
+
 class ImageType(enum.Enum):
-    backdrop = 'backdrop'
-    character = 'character'
-    handout = 'handout'
-    map = 'map'
+    backdrop = "backdrop"
+    character = "character"
+    handout = "handout"
+    map = "map"
+
+
+class ImageOrigin(enum.Enum):
+    cli = "cli"
+    url = "url"
+    upload = "upload"
+
+
+class SessionMode(enum.Enum):
+    loading = "loading"
+    backdrop = "backdrop"
+    combat = "combat"
+    handout = "handout"
+    map = "map"
+    empty = "empty"
+
 
 def hash_fn(f):
-    e = '1253467890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM'
-    return ''.join(random.choices(e,k=20))
+    e = "1253467890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+    return "".join(random.choices(e, k=20))
+
 
 class Image(Base):
-    #__tablename__ = "images"
+    # __tablename__ = "images"
     id: Mapped[int] = mapped_column(primary_key=True)
     path: Mapped[str] = mapped_column(String(256), index=True)
     name: Mapped[str] = mapped_column(String(100), index=True)
@@ -46,36 +60,47 @@ class Image(Base):
     hash: Mapped[str] = mapped_column(String(20), index=True)
     dimension_x: Mapped[int]
     dimension_y: Mapped[int]
-    tags: Mapped[list["Tag"]] = relationship(
-        back_populates="images", secondary=image_tags
-    )
+    tags: Mapped[list["Tag"]] = relationship(back_populates="images", secondary=image_tags)
     type: Mapped[ImageType] = mapped_column(default=ImageType.backdrop)
+    palette: Mapped[str] = mapped_column(String(50), nullable=True)
+    # origin: Mapped[ImageOrigin] = mapped_column(default=ImageOrigin.cli)
+    # attribution: Mapped[str] = mapped_column(String(50))
 
     @classmethod
-    def create_from_local_file(cls, path: PathLike, **kwargs) -> 'Image':
+    def create_from_local_file(cls, path: pathlib.Path, **kwargs) -> "Image":
         with PImage.open(path) as f:
-            (x,y) = f.size
+            (x, y) = f.size
             imhash = hash_fn(f)
-        i = cls(path=str(path), name=path.stem, **kwargs, dimension_x=x, dimension_y=y, hash=imhash)
+        i = cls(
+            path=str(path),
+            name=path.stem,
+            **kwargs,
+            dimension_x=x,
+            dimension_y=y,
+            hash=imhash,
+        )
         return i
-    
+
     @classmethod
-    def create_from_uri(cls, uri: str, **kwargs) -> 'Image':
+    def create_from_uri(cls, uri: str, **kwargs) -> "Image":
         response = httpx.get(uri)
-        with PImage.open(response) as f:
-            (x,y) = f.size
-            imhash = hash_fn(f)
-        i = cls(path=uri, **kwargs, dimension_x=x, dimension_y=y, hash=imhash)
-        return i
-    
+        try:
+            with PImage.open(response) as f:  # type: ignore
+                (x, y) = f.size
+                imhash = hash_fn(f)
+            i = cls(
+                path=uri, **kwargs, dimension_x=x, dimension_y=y, hash=imhash
+            )  # , origin=ImageOrigin.url)
+            return i
+        except UnidentifiedImageError:
+            raise HTTPException(status_code=404, detail=f"Image at {uri} not found")
+
 
 class Tag(Base):
-    #__tablename__ = "tags"
+    # __tablename__ = "tags"
     id: Mapped[int] = mapped_column(primary_key=True)
-    tag: Mapped[str] = mapped_column(String(30))
-    images: Mapped[list["Image"]] = relationship(
-        back_populates="tags", secondary=image_tags
-    )
+    tag: Mapped[str] = mapped_column(String(30), unique=True)
+    images: Mapped[list["Image"]] = relationship(back_populates="tags", secondary=image_tags)
 
     def __init__(self, tag: str):
         self.tag = tag.lower()
@@ -83,36 +108,48 @@ class Tag(Base):
 
 
 class Message(Base):
-    #__tablename__ = "messages"
+    # __tablename__ = "messages"
     id: Mapped[int] = mapped_column(primary_key=True)
     message: Mapped[str] = mapped_column(String(400))
 
-    @classmethod
-    def get_random(cls):
-        return select(cls).order_by(func.random())
 
 class Session(Base):
-    #__tablename__ = "sessions"
+    # __tablename__ = "sessions"
     id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(100), insert_default="")
-    image_id: Mapped[int] = mapped_column(ForeignKey("images.id"))
-    image: Mapped["Image"] = relationship("Image")
-    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"))
+    title: Mapped[str] = mapped_column(String(100))
+    backdrop_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
+    backdrop: Mapped["Image"] = relationship("Image", foreign_keys=[backdrop_id])
+    overlay_image_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
+    overlay_image: Mapped["Image"] = relationship("Image", foreign_keys=[overlay_image_id])
+    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"), nullable=True)
     message: Mapped["Message"] = relationship("Message")
+    combat_id: Mapped[int] = mapped_column(ForeignKey("combat.id"), nullable=True)
+    combat: Mapped["Combat"] = relationship("Combat")
+
+    mode: Mapped[str] = mapped_column(String(8), default="empty")  # SessionMode.empty)
 
 
 class Combat(Base):
-    __tablename__ = "combat"
+    __tablename__ = "combat"  # type: ignore
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(100), insert_default="")
-    participants: Mapped[list["Participant"]] = relationship(back_populates="combat")
+    round: Mapped[int] = mapped_column(default=0)
+    # active_participant_id: Mapped[Optional[int]] = mapped_column(ForeignKey("participants.id"))
+    # active_participant: Mapped[Optional["Participant"]] = relationship(
+    #     foreign_keys=[active_participant_id]
+    # )
+    active_participant_id: Mapped[Optional[int]]
+    is_active: Mapped[bool] = mapped_column(insert_default=False)
+    participants: Mapped[list["Participant"]] = relationship(
+        back_populates="combat", primaryjoin="Participant.combat_id==Combat.id"
+    )
+
 
 class Participant(Base):
-    #__tablename__ = "participants"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), insert_default="")
     combat_id: Mapped[int] = mapped_column(ForeignKey("combat.id"))
-    entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=True)
+    entity_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entities.id"), nullable=True)
     combat: Mapped["Combat"] = relationship(back_populates="participants")
 
     entity: Mapped["Entity"] = relationship()
@@ -121,20 +158,36 @@ class Participant(Base):
     is_PC: Mapped[bool] = mapped_column(default=False)
     damage: Mapped[int] = mapped_column(default=0)
     max_hp: Mapped[int] = mapped_column(default=0)
+    hit_dice: Mapped[str] = mapped_column(String(50), default="")
     ac: Mapped[int] = mapped_column(default=0)
-    initiative: Mapped[int] = mapped_column(default=10)
-    initiative_modifier: Mapped[int] = mapped_column(default=0, nullable=True)
+    initiative: Mapped[int] = mapped_column(default=None, nullable=True)
+    initiative_modifier: Mapped[int] = mapped_column(default=0)
     conditions: Mapped[str] = mapped_column(String(256), default="")
     has_reaction: Mapped[bool] = mapped_column(default=True)
 
     colour: Mapped[str] = mapped_column(String(10), nullable=True)
-    image_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("images.id"), nullable=True
-    )
+    image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("images.id"), nullable=True)
     image: Mapped[Optional[Image]] = relationship("Image")
 
+    @classmethod
+    def from_entity(cls, e: "Entity", **kwargs) -> "Participant":
+        p = Participant(
+            name=kwargs.get("name", e.name),
+            entity=e,
+            is_visible=kwargs.get("is_visible", True),
+            is_PC=kwargs.get("is_PC", e.is_PC),
+            damage=0,
+            max_hp=kwargs.get("hit_dice", roll(e.hit_dice)),
+            hit_dice=kwargs.get("hit_dice", ""),
+            ac=kwargs.get("ac", e.ac),
+            initiative_modifier=kwargs.get("initiative_modifier", e.initiative_modifier),
+            image=e.image,
+        )
+        return p
+
+
 class Entity(Base):
-    __tablename__ = "entities"
+    __tablename__ = "entities"  # type: ignore
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), insert_default="")
     hit_dice: Mapped[str] = mapped_column(String(50), insert_default="")
@@ -143,13 +196,10 @@ class Entity(Base):
     initiative_modifier: Mapped[int] = mapped_column(default=0)
     data: Mapped[str] = mapped_column(BLOB, nullable=True)
     is_PC: Mapped[bool] = mapped_column(default=False)
-    image_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("images.id"), nullable=True
-    )
+    image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("images.id"), nullable=True)
     image: Mapped[Optional[Image]] = relationship("Image")
-    source: Mapped[str] = mapped_column(String(10), nullable=True)
-    source_page: Mapped[int] = mapped_column(nullable=True)
-
+    source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
 
 
 class Focus:
@@ -194,9 +244,7 @@ class Focus:
         f = Focus(self.image)
         f.fx = x
         f.fy = y
-        return (
-            f  # x, y, self.get_zoom(x,y,self.image.dimension_x, self.image.dimension_y)
-        )
+        return f  # x, y, self.get_zoom(x,y,self.image.dimension_x, self.image.dimension_y)
 
     @property
     def csstransform(self) -> str:

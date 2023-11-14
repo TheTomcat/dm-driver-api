@@ -1,32 +1,37 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
-from fastapi import Depends, Response, status
-from fastapi.routing import APIRouter
+from fastapi import APIRouter, Depends, Response
 from fastapi_pagination import Page
+
+# from fastapi_pagination.links import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from core.db import foreign_key
 from api.schemas import (
     Entity,
     EntityCreate,
+    EntityFilter,
     EntityUpdate,
 )
-from api.services import get_entity_service
+
 # from api.db.schemas.filters import EntityFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
-from api.services import EntityService
+from api.services import EntityService, get_entity_service
+from api.utils.filters import generate_filter_query
+from core.db import foreign_key
 
 router = APIRouter(prefix="/entity")
+
 
 @router.get("/", response_model=Page[Entity], tags=["entities"])
 async def list_entities(
     entity_service: Annotated[EntityService, Depends(get_entity_service)],
-    # entity_filter: Annotated[EntityFilter, Depends()],
+    entity_filter: Annotated[EntityFilter, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Entity]:
     "Get all entities"
-    return entity_service.get_all()
+    q = generate_filter_query(models.Entity, entity_filter)
+    return entity_service.get_some(q)
 
 
 @router.get(
@@ -39,7 +44,7 @@ async def get_entity(
     entity_id: foreign_key,
     entity_service: Annotated[EntityService, Depends(get_entity_service)],
     # current_user: CurrentActiveUser,
-) -> Optional[Entity]:
+) -> models.Entity:
     "Get a single entity by id"
     return entity_service.get(entity_id)
 

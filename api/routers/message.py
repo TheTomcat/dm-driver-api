@@ -1,35 +1,34 @@
-from typing import Any, List, Optional
+from typing import Any, Optional
 
-from fastapi import Depends, Response, status
+from fastapi import Depends, Response
 from fastapi.routing import APIRouter
 from fastapi_pagination import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from core.db import foreign_key
-from api.schemas import (
-    Message,
-    MessageCreate,
-    MessageUpdate,
-)
-from api.services import get_message_service
+from api.schemas import Message, MessageCreate, MessageFilter, MessageUpdate
+
 # from api.db.schemas.filters import MessageFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
-from api.services import MessageService
+from api.services import MessageService, get_message_service
+from api.utils.filters import generate_filter_query
+from core.db import foreign_key
 
 router = APIRouter(prefix="/message")
+
 
 @router.get("/", response_model=Page[Message], tags=["messages"])
 async def list_messages(
     message_service: Annotated[MessageService, Depends(get_message_service)],
-    # message_filter: Annotated[MessageFilter, Depends()],
+    message_filter: Annotated[MessageFilter, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Message]:
     "Get all messages"
-    return message_service.get_all()
+    q = generate_filter_query(models.Message, message_filter)
+    return message_service.get_some(q)
 
 
-@router.get("/", response_model=Message, tags=["messages"])
+@router.get("/random/", response_model=Message, tags=["messages"])
 async def get_random_messages(
     message_service: Annotated[MessageService, Depends(get_message_service)],
 ) -> models.Message:
@@ -47,7 +46,7 @@ async def get_message(
     message_id: foreign_key,
     message_service: Annotated[MessageService, Depends(get_message_service)],
     # current_user: CurrentActiveUser,
-) -> Optional[Message]:
+) -> Optional[models.Message]:
     "Get a single message by id"
     return message_service.get(message_id)
 
