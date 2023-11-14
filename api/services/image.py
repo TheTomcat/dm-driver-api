@@ -84,6 +84,7 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
         return image
 
     def get_images_by_tag_match(self, taglist: list[int], transformer=None) -> ImageMatchResult:  # type: ignore
+        # raise DeprecationWarning
         if transformer is None:
 
             def transformer(x):
@@ -117,6 +118,43 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
                 "tags": taglist,
             }
         )
+
+    # def get_images_by_tag_match_new(self, taglist: list[int], transformer=None) -> Page[ImageURL]:  # type: ignore
+    #     if transformer is None:
+
+    #         def transformer(x):
+    #             return x
+
+    #     q = (
+    #         select(
+    #             Image,
+    #             #                image_tags.c.image_id.label("match_id"),
+    #             func.count(image_tags.c.image_id).label("match_count"),
+    #             #                func.aggregate_strings(image_tags.c.tag_id, ",").label("tags"),
+    #         )
+    #         .join(Image, Image.id == image_tags.c.image_id)
+    #         .where(image_tags.c.tag_id.in_(taglist))
+    #         .group_by(image_tags.c.image_id)
+    #         .order_by(text("match_count DESC"))
+    #         # .limit(12)
+    #     )
+    #     # results = self.db_session.execute(q).all()
+    #     return paginate(self.db_session, q, transformer=transformer)
+
+    # ImageMatchResult(
+    #         **{
+    #             "matches": [
+    #                 {
+    #                     "image": transformer(res[0]),
+    #                     "image_id": res[1],
+    #                     "match_count": res[2],
+    #                     "tags": res[3].split(","),
+    #                 }
+    #                 for res in results
+    #             ],
+    #             "tags": taglist,
+    #         }
+    #     )
 
     def get_full_image(self, image_id: int) -> FileResponse:
         image = self.get(image_id)
