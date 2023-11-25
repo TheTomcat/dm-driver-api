@@ -1,0 +1,325 @@
+{
+    "payload": [
+        {
+            "message": "The longer everything goes according to plan, the bigger the impending disaster.",
+            "message_id": 1
+        },
+        {
+            "message": "The world is richer when you turn enemies into friends, but that's not the same as you being richer.",
+            "message_id": 2
+        },
+        {
+            "message": "The enemy of my enemy is my enemy's enemy. No more. No less.",
+            "message_id": 3
+        },
+        {
+            "message": "Anything is amphibious if you can get it back out of the water.",
+            "message_id": 4
+        },
+        {
+            "message": "\"They'll never expect this\" means \"I want to try something stupid.\"",
+            "message_id": 5
+        },
+        {
+            "message": "Two wrongs is probably not going to be enough.",
+            "message_id": 6
+        },
+        {
+            "message": "Good is not nice and lawful is not stupid.",
+            "message_id": 7
+        },
+        {
+            "message": "Soup was invented in the Abyss.",
+            "message_id": 8
+        },
+        {
+            "message": "Sssshhhh, don't tell. The DM doesn't know I'm here. ",
+            "message_id": 9
+        },
+        {
+            "message": "You trust me, don't you?",
+            "message_id": 10
+        },
+        {
+            "message": "Does anyone actually read these?",
+            "message_id": 11
+        },
+        {
+            "message": "Taking damage while at 0 hp results in a failed death save. If you are reduced to 0 hp while you are flying at least 10 ft. above the ground, you will take falling damage.",
+            "message_id": 12
+        },
+        {
+            "message": "Taking a critical hit while at 0 hp results in two failed death saves. While you are at 0 hp, any attacks made from within 5 ft. of you are automatically critical hits.",
+            "message_id": 13
+        },
+        {
+            "message": "Don't stand in the fire. Unless you're immune to fire damage. Or it's an illusion. Or... y'know what? Stand in the fire if you want to.",
+            "message_id": 14
+        },
+        {
+            "message": "Danger lurks around every corner. So, avoid all corners.",
+            "message_id": 15
+        },
+        {
+            "message": "The Dash action was invented by John Dashing when he tried to walk twice at the same time.",
+            "message_id": 16
+        },
+        {
+            "message": "A wizard with no spell slots is afraid. A barbarian with no weapons is excited.",
+            "message_id": 17
+        },
+        {
+            "message": "Licking doorknobs is illegal on other planes.",
+            "message_id": 18
+        },
+        {
+            "message": "Believing in the heart of the cards does not give you advantage on your roll.",
+            "message_id": 19
+        },
+        {
+            "message": "Believing in the heart of the cards might give you advantage with the Deck of Many things.",
+            "message_id": 20
+        },
+        {
+            "message": "Sometimes the heart of the cards belongs to Tiamat and she's feeling especially bitchy today.",
+            "message_id": 21
+        },
+        {
+            "message": "Remember, running is always an option.",
+            "message_id": 22
+        },
+        {
+            "message": "Remember, crying is a free action.",
+            "message_id": 23
+        },
+        {
+            "message": "Powerful magic items are created by powerful spellcasters. Do not try to rob the magic shop.",
+            "message_id": 24
+        },
+        {
+            "message": "Strahd wasn't loved by his mother as a child.",
+            "message_id": 25
+        },
+        {
+            "message": "Repeat to yourself, \"It's just a game, I should really just relax.\"",
+            "message_id": 26
+        },
+        {
+            "message": "If you are having trouble with an encounter, try reducing the enemies' hit points to 0, while keeping yours above 0.",
+            "message_id": 27
+        },
+        {
+            "message": "It's 10 o'clock. Do you know where your familiars are?",
+            "message_id": 28
+        },
+        {
+            "message": "You have successfully orphaned at least 37 goblin children.",
+            "message_id": 29
+        },
+        {
+            "message": "When the DM says \"Really? Are you sure?\", you say \"No.\"",
+            "message_id": 30
+        },
+        {
+            "message": "Use your social skills often; violence isn't always the answer! Just usually.",
+            "message_id": 31
+        },
+        {
+            "message": "Your game is important to us... please stand by.",
+            "message_id": 32
+        },
+        {
+            "message": "Remember, don't sweat the small stuff. Gnomes, for example.",
+            "message_id": 33
+        },
+        {
+            "message": "Remember, Owlbears may be friend shaped, but are, in fact, not friends.",
+            "message_id": 34
+        },
+        {
+            "message": "Just because you're paranoid doesn't mean there isn't an invisible demon about to bite your face off.",
+            "message_id": 35
+        },
+        {
+            "message": "Prophecy is never wrong, oracles are never false, prophets never turn out to be deluded, and \"predictions\" never turn out to be political allegories of the time they were written in.",
+            "message_id": 36
+        },
+        {
+            "message": "Remain cautious while exploring the world; Lizardfolk don't care if you're level ten or level two if they outnumber you 20:1.",
+            "message_id": 37
+        },
+        {
+            "message": "Don't take advice from random people on reddit.",
+            "message_id": 38
+        },
+        {
+            "message": "If you often find yourself in need of healing, perhaps you should try taking less damage.",
+            "message_id": 39
+        },
+        {
+            "message": "Political and nonviolent solutions are possi... oh he's already dead.",
+            "message_id": 40
+        },
+        {
+            "message": "Most people die when they are killed. Most.",
+            "message_id": 41
+        },
+        {
+            "message": "A chest sitting in the centre of an otherwise empty room is definitely a mimic.",
+            "message_id": 42
+        },
+        {
+            "message": "A chest sitting in the centre of an otherwise empty room is definitely trapped.",
+            "message_id": 43
+        },
+        {
+            "message": "A chest sitting in the centre of an otherwise empty room is definitely safe.",
+            "message_id": 44
+        },
+        {
+            "message": "Give the Warlock and Fighter ample naps. They get cranky.",
+            "message_id": 45
+        },
+        {
+            "message": "Dungeons and Dragons was invented by John Dungeons and his cousin Steven D'Ragon.",
+            "message_id": 46
+        },
+        {
+            "message": "\"Goblins are overrated, they don't even have scales.\" <br /><br/><small><small>This message brought to you by the Guild of Kobolds</small></small>",
+            "message_id": 47
+        },
+        {
+            "message": "While sticks and stones do have the potential to break your bones, with Vicious Mockery watch as words do in fact hurt your foes.",
+            "message_id": 48
+        },
+        {
+            "message": "Help! I'm trapped in a loading screen tip factory!",
+            "message_id": 49
+        },
+        {
+            "message": "Prestidigitation, Thaumaturgy, and Druidcraft allow you to create minor special effects, sound or distraction, among other things. But you still can't do that.",
+            "message_id": 50
+        },
+        {
+            "message": "Expertise in Persuasion is not a substitute for Dominate Person.",
+            "message_id": 51
+        },
+        {
+            "message": "Not every NPC is untrustworthy and trying to eat your heart. I mean this one probably is, but maybe the next? Okay so not that one either...",
+            "message_id": 52
+        },
+        {
+            "message": "You are now breathing manually.",
+            "message_id": 53
+        },
+        {
+            "message": "You can't save your consumables for later if there is no later.",
+            "message_id": 54
+        },
+        {
+            "message": "To move, use WSAD.",
+            "message_id": 55
+        },
+        {
+            "message": "Reticulating splines... Removing spines...",
+            "message_id": 56
+        },
+        {
+            "message": "You may have plate armour, but you do not have plot armour.",
+            "message_id": 57
+        },
+        {
+            "message": "You must gather your party before venturing forth.",
+            "message_id": 58
+        },
+        {
+            "message": "If you have to look it up, it's probably a war crime.",
+            "message_id": 59
+        },
+        {
+            "message": "Pillage first, then burn.",
+            "message_id": 60
+        },
+        {
+            "message": "If violence wasn't your last resort, you failed to resort to enough of it.",
+            "message_id": 61
+        },
+        {
+            "message": "It's Dungeons and Dragons! The options are limitless, but the consequences are mandatory.",
+            "message_id": 62
+        },
+        {
+            "message": "Well well well, if it isn't the consequences of your own actions... Roll initiative!",
+            "message_id": 63
+        },
+        {
+            "message": "Never split the party. <br/><br/>NEVER SPLIT THE PARTY!",
+            "message_id": 64
+        },
+        {
+            "message": "There are no wrong paths in Dungeons and Dragons, just those that your DM hasn't prepared for.",
+            "message_id": 65
+        },
+        {
+            "message": "Be sure to take note of the lore and history of the world. Somebody probably worked really hard on it.",
+            "message_id": 66
+        },
+        {
+            "message": "In DND, each coin is worth 10 of the next lowest type. <br/><br/> Except electrum, nobody likes electrum.",
+            "message_id": 67
+        },
+        {
+            "message": "According to Monster Optometrists, a Beholder's eyesight is 20:20:20:20:20:20:20:20:20:20:14.",
+            "message_id": 68
+        },
+        {
+            "message": "Just because you can, doesn't mean you should. But it does mean you probably will. ",
+            "message_id": 69
+        },
+        {
+            "message": "Most people would drink a potion orally, but there is nothing in the rules suggesting that it's not valid as a suppository.",
+            "message_id": 70
+        },
+        {
+            "message": "You can start a new game in D&D by striking your DM on the head with a heavy object, or by the use of a modify memory spell.",
+            "message_id": 71
+        },
+        {
+            "message": "You can pause a game of D&D by standing up and walking away from the table.",
+            "message_id": 72
+        },
+        {
+            "message": "You can take a screenshot of a game of D&D by touching your D20 and your character sheet at the same time.",
+            "message_id": 73
+        },
+        {
+            "message": "No... Please... Roll to seduce an NPC. Your DM is SUPER excited to rollplay that.",
+            "message_id": 74
+        },
+        {
+            "message": "Lawful characters obey a strict set of moral rules, and will always look both ways before crossing the street",
+            "message_id": 75
+        },
+        {
+            "message": "Chaotic characters don't hold themselves to rules. They won't put their tray tables up just because you told them to.",
+            "message_id": 76
+        },
+        {
+            "message": "Neutral characters believe in harmony and balance, and will often list mayonnaise as their favourite condiment",
+            "message_id": 77
+        },
+        {
+            "message": "Unaligned creatures don't comprehend the concept of alignment. Players cannot be unaligned, unless they're very very stupid.",
+            "message_id": 78
+        },
+        {
+            "message": "Learn Transmutation! Experience the joy of turning everything into a goat!",
+            "message_id": 79
+        },
+        {
+            "message": "You're not being edgy, you're just a bad person",
+            "message_id": 80
+        }
+    ],
+    "response": "OK"
+}

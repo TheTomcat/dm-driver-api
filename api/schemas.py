@@ -100,6 +100,16 @@ class TagFilter(BaseFilter):
 
 class EntityFilter(BaseFilter):
     name: Optional[str] = ""
+    is_PC: Optional[bool] = None
+
+
+class CombatFilter(BaseFilter):
+    title: Optional[str] = ""
+
+
+class ImageFilter(BaseFilter):
+    type: Optional[ImageType] = None
+    # taglist: Optional[list[int]] = Query(default=None)
 
 
 #################### TAgs

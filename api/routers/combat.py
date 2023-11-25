@@ -8,6 +8,7 @@ import api.models as models
 from api.schemas import (
     Combat,
     CombatCreate,
+    CombatFilter,
     CombatUpdate,
     ParticipantCreate,
 )
@@ -15,6 +16,7 @@ from api.schemas import (
 # from api.db.schemas.filters import CombatFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
 from api.services import CombatService, get_combat_service
+from api.utils.filters import generate_filter_query
 from core.db import foreign_key
 
 # router = HandleTrailingSlashRouter(prefix="/combat")
@@ -24,11 +26,12 @@ router = APIRouter(prefix="/combat")
 @router.get("/", response_model=Page[Combat], tags=["combats"])
 async def list_combats(
     combat_service: Annotated[CombatService, Depends(get_combat_service)],
-    # combat_filter: Annotated[CombatFilter, Depends()],
+    combat_filter: Annotated[CombatFilter, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Combat]:
     "Get all combats"
-    return combat_service.get_all()
+    q = generate_filter_query(models.Combat, combat_filter)
+    return combat_service.get_some(q)
 
 
 @router.get(

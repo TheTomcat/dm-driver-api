@@ -143,6 +143,8 @@ class Combat(Base):
     participants: Mapped[list["Participant"]] = relationship(
         back_populates="combat", primaryjoin="Participant.combat_id==Combat.id"
     )
+    # image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("images.id"), nullable=True)
+    # image: Mapped[Optional["Image"]] = relationship("Image")
 
 
 class Participant(Base):

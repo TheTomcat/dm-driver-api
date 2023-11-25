@@ -12,12 +12,13 @@ from api.schemas import (
     Image,
     ImageB64,
     ImageCreate,
-    ImageMatchResult,
+    ImageFilter,
     ImageScale,
     ImageUpdate,
     ImageURL,
 )
 from api.services import ImageService, get_image_service
+from api.utils.filters import generate_filter_query
 from core.db import foreign_key
 
 router = APIRouter(prefix="/image")
@@ -28,6 +29,7 @@ def build_transformer(router: APIRouter, **context):
 
 
 def inject_urls(model: models.Image, router: APIRouter, **context):
+    model = model
     url = router.url_path_for("get_full_image", image_id=model.id)
     thumbnail_url = router.url_path_for("get_image_thumbnail", image_id=model.id, **context)
     model.url = url  # type: ignore
@@ -38,22 +40,26 @@ def inject_urls(model: models.Image, router: APIRouter, **context):
 @router.get("/", response_model=Page[ImageURL], tags=["images"])
 async def list_images(
     image_service: Annotated[ImageService, Depends(get_image_service)],
-    # image_filter: Annotated[ImageFilter, Depends()],
+    image_filter: Annotated[ImageFilter, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Image]:
     "Get all images"
-    return image_service.get_some(transformer=build_transformer(router))
+    q = generate_filter_query(models.Image, image_filter)
+    return image_service.get_some(q, transformer=build_transformer(router))
 
 
 @router.get("/tag", tags=["images"])
 async def get_image_tag_matches(
     taglist: Annotated[list[int], Query()],
+    image_filter: Annotated[ImageFilter, Depends()],
     image_service: Annotated[ImageService, Depends(get_image_service)],
-) -> ImageMatchResult:
+) -> Page[ImageURL]:  # ImageMatchResult:
     def transformer(i):
         return inject_urls(i, router)
 
-    return image_service.get_images_by_tag_match(taglist, transformer=transformer)
+    q = generate_filter_query(models.Image, image_filter)
+    return image_service.get_images(q, taglist, transformer=build_transformer(router))
+    # return image_service.get_images_by_tag_match(taglist, transformer=transformer)
 
 
 @router.get(
@@ -128,6 +134,7 @@ async def upload_image(
     imdata: UploadFile,
     image_service: Annotated[ImageService, Depends(get_image_service)],
 ):
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
     image = image_service.get(image_id)
     try:
         with open(image.path, "rb") as f:

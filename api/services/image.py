@@ -2,13 +2,15 @@ from io import BytesIO
 
 from fastapi import HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
 from PIL import Image as PImage
-from sqlalchemy import delete, func, insert, select, text
+from sqlalchemy import Select, delete, func, insert, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from api.models import Image, Tag, image_tags
-from api.schemas import ImageB64, ImageCreate, ImageMatchResult, ImageScale, ImageUpdate
+from api.schemas import ImageB64, ImageCreate, ImageMatchResult, ImageScale, ImageUpdate, ImageURL
 from api.utils.image_helper import calculate_thumbnail_size, get_image_as_base64
 
 from .base import BaseService
@@ -119,11 +121,21 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
             }
         )
 
-    # def get_images_by_tag_match_new(self, taglist: list[int], transformer=None) -> Page[ImageURL]:  # type: ignore
-    #     if transformer is None:
+    def get_images(self, q: Select, taglist: list[int], transformer=None) -> Page[ImageURL]:  # type: ignore
+        if q is None:
+            q = select(self.model)
 
-    #         def transformer(x):
-    #             return x
+        s = (
+            select(Image.id, func.count(image_tags.c.image_id).label("match_count"))
+            .join(Image, Image.id == image_tags.c.image_id)
+            .where(image_tags.c.tag_id.in_(taglist))
+            .group_by(image_tags.c.image_id)
+            .order_by(text("match_count DESC"))
+            .subquery()
+        )
+
+        q = q.join(s, s.c.id == Image.id)
+        return paginate(self.db_session, q, transformer=transformer)
 
     #     q = (
     #         select(
