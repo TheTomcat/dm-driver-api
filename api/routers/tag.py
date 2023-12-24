@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from fastapi import APIRouter, Depends, Response
 from fastapi_pagination import Page
@@ -30,6 +30,13 @@ async def list_tags(
     "Get all tags"
     q = generate_filter_query(models.Tag, tag_filter)
     return tag_service.get_some(q)
+
+
+@router.get("/orphans", tags=["tags"])
+async def get_orphan_tags(
+    tag_service: Annotated[TagService, Depends(get_tag_service)]
+) -> Sequence[Tag]:
+    return tag_service.get_orphan_tags()  # type: ignore
 
 
 @router.get(
@@ -80,4 +87,14 @@ async def delete_tag(
     # current_user: CurrentActiveUser,
 ) -> Any:
     tag_service.delete(tag_id)
+    return Response(status_code=204)
+
+
+@router.put("/{tag_id}/merge/{tag2_id}", tags=["tags"])
+async def merge_tags(
+    tag_id: foreign_key,
+    tag2_id: foreign_key,
+    tag_service: Annotated[TagService, Depends(get_tag_service)],
+):
+    tag_service.merge(tag_id, tag2_id)
     return Response(status_code=204)

@@ -22,6 +22,13 @@ image_tags = Table(
     Column("tag_id", ForeignKey("tags.id"), primary_key=True),
 )
 
+image_entities = Table(
+    "image_entities",
+    Base.metadata,
+    Column("image_id", ForeignKey("images.id"), primary_key=True),
+    Column("entity_id", ForeignKey("entities.id"), primary_key=True),
+)
+
 
 class ImageType(enum.Enum):
     backdrop = "backdrop"
@@ -192,14 +199,41 @@ class Entity(Base):
     __tablename__ = "entities"  # type: ignore
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), insert_default="")
-    hit_dice: Mapped[str] = mapped_column(String(50), insert_default="")
-    ac: Mapped[int] = mapped_column(default=10)
-    cr: Mapped[str] = mapped_column(String(10), default="")
-    initiative_modifier: Mapped[int] = mapped_column(default=0)
-    data: Mapped[str] = mapped_column(BLOB, nullable=True)
     is_PC: Mapped[bool] = mapped_column(default=False)
+
     image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("images.id"), nullable=True)
     image: Mapped[Optional[Image]] = relationship("Image")
+
+    cr: Mapped[str] = mapped_column(String(10), default="")
+    hit_dice: Mapped[str] = mapped_column(String(50), insert_default="")
+    ac: Mapped[int] = mapped_column(default=10)
+    initiative_modifier: Mapped[int] = mapped_column(default=0)
+
+    # STR: Mapped[int] = mapped_column(default=10)
+    # DEX: Mapped[int] = mapped_column(default=10)
+    # CON: Mapped[int] = mapped_column(default=10)
+    # INT: Mapped[int] = mapped_column(default=10)
+    # WIS: Mapped[int] = mapped_column(default=10)
+    # CHA: Mapped[int] = mapped_column(default=10)
+
+    # saves: Mapped[str] = mapped_column(String(500), insert_default="")
+    # skills: Mapped[str] = mapped_column(String(500), insert_default="")
+    # senses: Mapped[str] = mapped_column(String(200), insert_default="")
+    # speed: Mapped[str] = mapped_column(String(200), insert_default="")
+
+    # damage_vulnerabilities
+    # damage_resisrances
+    # damage_immunities
+    # condition_immunities
+    # languages
+    # traits
+    # actions
+    # bonus_actions
+    # reactions
+    # legendary_actions
+    # mythic_actions
+
+    data: Mapped[str] = mapped_column(BLOB, nullable=True)
     source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
 

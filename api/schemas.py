@@ -109,6 +109,7 @@ class CombatFilter(BaseFilter):
 
 class ImageFilter(BaseFilter):
     type: Optional[ImageType] = None
+    types: Optional[str] = None
     # taglist: Optional[list[int]] = Query(default=None)
 
 
@@ -330,6 +331,7 @@ class ParticipantUpdate(BaseModel):
     is_PC: Optional[bool] = None
     damage: Optional[int] = None
     max_hp: Optional[int] = None
+    hit_dice: Optional[str] = None
     ac: Optional[int] = None
     initiative: Optional[int] = None
     initiative_modifier: Optional[int] = None
@@ -352,6 +354,7 @@ class ParticipantCreate(ParticipantBase):
     is_PC: bool = False
     damage: int = 0
     max_hp: Optional[int] = None
+    hit_dice: Optional[str] = None
     ac: int = 10
     initiative: Optional[int] = None
     initiative_modifier: int = 0
@@ -370,6 +373,7 @@ class Participant(ParticipantBase):
     is_PC: bool
     damage: int
     max_hp: Optional[int] = None
+    hit_dice: Optional[str]
     ac: int
     initiative: Optional[int] = None
     initiative_modifier: int

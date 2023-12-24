@@ -20,6 +20,8 @@ def generate_filter_query(model, filter: BaseFilter) -> Select:
                 q = _is_PC(q, model, val)
             case "type":
                 q = _type_is(q, model, val)
+            case "types":
+                q = _type_is_one_of(q, model, val)
     return q
 
 
@@ -45,3 +47,7 @@ def _is_PC(q: Select, model: Tag, param: str) -> Select:
 
 def _type_is(q: Select, model: Image, param: ImageType) -> Select:
     return q.where(model.type == param)  # type: ignore
+
+
+def _type_is_one_of(q: Select, model: Image, params: str) -> Select:
+    return q.where(model.type.in_(params.split("|")))  # type: ignore
