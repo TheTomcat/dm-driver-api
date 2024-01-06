@@ -1,7 +1,7 @@
 from functools import partial
 from typing import Any, Optional
 
-from fastapi import Depends, HTTPException, Query, Response, UploadFile, status
+from fastapi import Depends, Query, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.routing import APIRouter
 from fastapi_pagination import Page
@@ -128,21 +128,24 @@ async def update_image(
 #         # filedata = await imdata.read()
 
 
-@router.patch("/{image_id}/data", tags=["images"])
+@router.post("/upload", tags=["images"])
 async def upload_image(
-    image_id: foreign_key,
-    imdata: UploadFile,
+    image_file: UploadFile,
+    # image: ImageUpload,
+    image_name: str,
+    image_type: models.ImageType,
     image_service: Annotated[ImageService, Depends(get_image_service)],
 ):
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
-    image = image_service.get(image_id)
-    try:
-        with open(image.path, "rb") as f:
-            f.write(imdata.read)  # type: ignore
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return Response(status_code=200)
-    # filedata = await imdata.read()
+    return image_service.upload_image(image_file, image_name, image_type)
+    # raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
+    # image = image_service.get(image_id)
+    # try:
+    #     with open(image.path, "rb") as f:
+    #         f.write(imdata.read)  # type: ignore
+    # except Exception:
+    #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # return Response(status_code=200)
+    # # filedata = await imdata.read()
 
 
 @router.patch("/{image_id}/tag", response_model=Image, tags=["images"])

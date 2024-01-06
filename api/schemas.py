@@ -1,7 +1,13 @@
 import enum
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    StringConstraints,
+    ValidationError,
+    model_validator,
+)
 
 from api.models import ImageType
 from core.db import foreign_key
@@ -195,6 +201,11 @@ class ImageCreate(ImageBase):
     name: str
 
 
+class ImageUpload(BaseModel):
+    name: str
+    type: Optional[ImageType] = ImageType.character
+
+
 class ImageUpdate(BaseModel):
     name: Optional[str] = None
     focus_x: Optional[int] = None
@@ -368,6 +379,7 @@ class Participant(ParticipantBase):
     combat_id: foreign_key
     name: str
     entity_id: Optional[foreign_key]
+    # entity: Optional["Entity"]
     image_id: Optional[foreign_key]
     is_visible: bool
     is_PC: bool
@@ -436,6 +448,7 @@ class EntityBase(BaseModel):
     initiative_modifier: int = 0
     source: Optional[str] = None
     source_page: Optional[int] = None
+    # data: Optional[bytes] = None
 
     model_config = ConfigDict(alias_generator=entity_alias, populate_by_name=True)
 
@@ -458,10 +471,25 @@ class EntityCreate(EntityBase):
 
 class Entity(EntityBase):
     id: foreign_key
+    data: Optional[bytes]
 
     model_config = ConfigDict(
         from_attributes=True, alias_generator=entity_alias, populate_by_name=True
     )
+
+    # @model_validator(mode="before")
+    # @classmethod
+    # def convert_to_json(cls, data):
+    #     # try:
+    #     if data.data is not None and not isinstance(data.data, dict):
+    #         data.data = json.loads(data.data)
+    #     elif isinstance(data.data, dict):
+    #         pass
+    #     else:
+    #         data.data = {}
+
+    #     # except Exception:
+    #     return data
 
 
 ###################### Session

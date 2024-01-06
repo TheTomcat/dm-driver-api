@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     PROFILE_QUERIES: bool = False
 
+    UPLOAD_DIR: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

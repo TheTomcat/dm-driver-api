@@ -20,7 +20,7 @@ async def index(request: Request):
 
 
 @router.websocket("/socket/{session_id}")  # /{client_id}")
-async def join_ws(websocket: WebSocket, session_id: int):  # , client_id: int):
+async def join_ws(websocket: WebSocket, session_id: str):  # , client_id: int):
     print("Client joining room", session_id)
     await websocket.accept()
 
@@ -35,14 +35,14 @@ async def join_ws(websocket: WebSocket, session_id: int):  # , client_id: int):
         await chatroom_ws_sender(websocket, session_id)
 
 
-async def chatroom_ws_receiver(websocket: WebSocket, session_id: int):
+async def chatroom_ws_receiver(websocket: WebSocket, session_id: str):
     async for message in websocket.iter_json():
         print("Rec: ", message, session_id)
 
         await broadcast.publish(channel=make_channel(session_id), message=message)
 
 
-async def chatroom_ws_sender(websocket: WebSocket, session_id: int):
+async def chatroom_ws_sender(websocket: WebSocket, session_id: str):
     async with broadcast.subscribe(channel=make_channel(session_id)) as subscriber:
         async for event in subscriber:
             print("send", event)

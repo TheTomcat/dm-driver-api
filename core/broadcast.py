@@ -1,7 +1,7 @@
 from broadcaster import Broadcast
 
 
-def make_channel(session_id: int) -> str:
+def make_channel(session_id: str) -> str:
     return f"sess{session_id}"
 
 

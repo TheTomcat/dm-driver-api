@@ -1,7 +1,7 @@
 # Longterm Feature Plan
  - [ ] Metadata in images - stuff that is visible but not user-modifiable - origin (cli, upload, web), colour details?
  - [ ] Image attribution (if known) - str field vs attribution table? Could also attribute entities 
- - [ ] Image processing  - { palate: [(r,g,b), (r,g,b), (r,g,b)]} via color-thief maybe?
+ - [x] Image processing  - { palate: [(r,g,b), (r,g,b), (r,g,b)]} via color-thief maybe?
  - [ ] Asynchronous workers via Redis and Celery
  - [ ] Appropriate frontend for the above
 

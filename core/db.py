@@ -1,7 +1,10 @@
+import json
+
 import sqlalchemy.types as types
-from sqlalchemy import VARCHAR, MetaData, String
+from sqlalchemy import BLOB, VARCHAR, MetaData, String
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 from typing_extensions import Annotated
 
 Intpk = Annotated[int, mapped_column(primary_key=True)]
@@ -96,3 +99,31 @@ class CSV(types.TypeDecorator):
 
     def copy(self, **kw):
         return CSV(self.impl.length)  # type: ignore
+
+
+class JSONEncodedDict(TypeDecorator):
+    """Represents an immutable structure as a json-encoded string.
+
+    Usage:
+
+        JSONEncodedDict(255)
+
+    """
+
+    impl = BLOB
+
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value)
+
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
+
+
+# json_type = MutableDict.as_mutable(JSONEncodedDict)

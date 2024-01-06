@@ -181,6 +181,7 @@ def parse_compendium(
                 is_PC=False,
                 source=monster["source"],
                 source_page=monster["page"],
+                data=json.dumps(monster).encode(),
             )
             if process_images and monster.get("hasToken", False) and bestiaryimagepath is not None:
                 datapath = bestiaryimagepath.joinpath(monster["source"].upper())
@@ -258,6 +259,30 @@ def setup():
     build_dummy_data(players)
 
     generate_tags()
+
+
+@app.command()
+def insert_extra_data():
+    compendia = [
+        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mm.json",
+        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mtf.json",
+        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-vgm.json",
+        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-ftd.json",
+    ]
+    monsters = []
+    for compendium in compendia:
+        with open(compendium) as f:
+            monsters.extend(json.load(f)["monster"])
+
+    q = select(Entity).where(Entity.is_PC != True)  # noqa: E712
+    session = create_session()
+    results = session.scalars(q).all()
+    for result in results:
+        m = next(filter(lambda m: m["name"] == result.name, monsters))
+        if m:
+            print(f'Putting {m["name"]} into {result.name}')
+            result.data = json.dumps(m).encode()
+    session.commit()
 
 
 @app.command()

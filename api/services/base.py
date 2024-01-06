@@ -88,5 +88,8 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def delete(self, id: Any) -> None:
         query = delete(self.model).where(self.model.id == id)
-        self.db_session.execute(query)
-        self.db_session.commit()
+        try:
+            self.db_session.execute(query)
+            self.db_session.commit()
+        except IntegrityError:
+            self.db_session.rollback()

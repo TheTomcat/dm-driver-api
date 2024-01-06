@@ -209,33 +209,76 @@ class Entity(Base):
     ac: Mapped[int] = mapped_column(default=10)
     initiative_modifier: Mapped[int] = mapped_column(default=0)
 
-    # STR: Mapped[int] = mapped_column(default=10)
-    # DEX: Mapped[int] = mapped_column(default=10)
-    # CON: Mapped[int] = mapped_column(default=10)
-    # INT: Mapped[int] = mapped_column(default=10)
-    # WIS: Mapped[int] = mapped_column(default=10)
-    # CHA: Mapped[int] = mapped_column(default=10)
-
-    # saves: Mapped[str] = mapped_column(String(500), insert_default="")
-    # skills: Mapped[str] = mapped_column(String(500), insert_default="")
-    # senses: Mapped[str] = mapped_column(String(200), insert_default="")
-    # speed: Mapped[str] = mapped_column(String(200), insert_default="")
-
-    # damage_vulnerabilities
-    # damage_resisrances
-    # damage_immunities
-    # condition_immunities
-    # languages
-    # traits
-    # actions
-    # bonus_actions
-    # reactions
-    # legendary_actions
-    # mythic_actions
-
-    data: Mapped[str] = mapped_column(BLOB, nullable=True)
+    data: Mapped[bytes] = mapped_column(BLOB, nullable=True)
     source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
+
+
+# class EntityData(Base):
+#     __tablename__ = "entitydata"  # type: ignore
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     entity_id: Mapped[Optional[int]] = mapped_column(ForeignKey("entities.id"))
+#     entity: Mapped[Optional["Entity"]] = relationship()
+
+#     STR: Mapped[int] = mapped_column(default=10)
+#     DEX: Mapped[int] = mapped_column(default=10)
+#     CON: Mapped[int] = mapped_column(default=10)
+#     INT: Mapped[int] = mapped_column(default=10)
+#     WIS: Mapped[int] = mapped_column(default=10)
+#     CHA: Mapped[int] = mapped_column(default=10)
+
+#     saves: Mapped[str] = mapped_column(String(75), insert_default="") ## "str":"+15", 11*6+5
+#     skills: Mapped[str] = mapped_column(String(500), insert_default="")
+#     senses: Mapped[str] = mapped_column(String(200), insert_default="")
+#     speed: Mapped[str] = mapped_column(String(200), insert_default="")
+
+#     damage_vulnerabilities
+#     damage_resisrances
+#     damage_immunities
+#     condition_immunities
+#     languages
+#     traits
+#     actions
+#     bonus_actions
+#     reactions
+#     legendary_actions
+#     mythic_actions
+
+# class SpellSchool(enum.Enum):
+#     Abjuration = "A"
+#     Conjuration = "C"
+#     Divination = "D"
+#     Enchantment = "E"
+#     Evocation = "V"
+#     Illusion = "I"
+#     Necromancy = "N"
+#     Transmutation = "T"
+
+
+# class SpellDurationType(enum.Enum):
+#     timed = "timed"
+#     special = "special"
+#     instant = "instant"
+#     permanent = "permanent"
+
+
+# class Spell(Base):
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     name: Mapped[str] = mapped_column(String(50), nullable=False)
+#     level: Mapped[int]
+#     school: Mapped[SpellSchool]
+#     source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+#     source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
+#     time_num: Mapped[int]
+#     time_unit: Mapped[str] = mapped_column()
+#     range: Mapped[str]
+#     duration_type: Mapped[SpellDurationType]
+#     duration_num: Mapped[int]
+#     duration_unit: Mapped[str]
+#     has_verbal: Mapped[bool]
+#     has_somatic: Mapped[bool]
+#     has_material: Mapped[bool]
+#     material_component: Mapped[str] = mapped_column(String(50), nullable=True)
 
 
 class Focus:
