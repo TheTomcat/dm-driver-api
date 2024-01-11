@@ -12,8 +12,9 @@ from sqlalchemy import Column, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import BLOB
 
+from core.colour import extract_pallete
 from core.db import Base
-from core.utils import roll
+from core.utils import rgb_to_hex, roll
 
 image_tags = Table(
     "image_tags",
@@ -27,6 +28,10 @@ image_entities = Table(
     Base.metadata,
     Column("image_id", ForeignKey("images.id"), primary_key=True),
     Column("entity_id", ForeignKey("entities.id"), primary_key=True),
+)
+
+image_favourites = Table(
+    "image_favourites", Base.metadata, Column("image_id", ForeignKey("images.id"), primary_key=True)
 )
 
 
@@ -74,7 +79,9 @@ class Image(Base):
     # attribution: Mapped[str] = mapped_column(String(50))
 
     @classmethod
-    def create_from_local_file(cls, path: pathlib.Path, **kwargs) -> "Image":
+    def create_from_local_file(
+        cls, path: pathlib.Path, calculate_palette=False, **kwargs
+    ) -> "Image":
         with PImage.open(path) as f:
             (x, y) = f.size
             imhash = hash_fn(f)
@@ -86,6 +93,8 @@ class Image(Base):
             dimension_y=y,
             hash=imhash,
         )
+        if calculate_palette:
+            i.palette = ",".join(map(rgb_to_hex, extract_pallete(path)))
         return i
 
     @classmethod

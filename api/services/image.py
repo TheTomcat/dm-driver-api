@@ -11,22 +11,15 @@ from sqlalchemy import Select, delete, func, insert, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from api.models import Image, ImageType, Tag, image_tags
-from api.schemas import (
-    ImageB64,
-    ImageCreate,
-    ImageMatchResult,
-    ImageScale,
-    ImageUpdate,
-    ImageURL,
-)
+from api.models import Image, Tag, image_tags
+from api.schemas import ImageB64, ImageCreate, ImageMatchResult, ImageScale, ImageUpdate, ImageURL
 from api.utils.image_helper import calculate_thumbnail_size, get_image_as_base64
 from config import get_settings
 
 from .base import BaseService
 
 settings = get_settings()
-UPLOAD_DIR = Path(settings.UPLOAD_DIR)
+UPLOAD_DIR = Path("C:\\dev\\test")
 
 
 class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
@@ -224,21 +217,20 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
                 detail=f"An error occured. Perhaps the image path is invalid. {image.path}",
             )
 
-    async def upload_image(self, image_file: UploadFile, image_name: str, image_type: ImageType):
+    async def upload_image(
+        self, image_file: UploadFile
+    ):  # , image_name: str, image_type: ImageType):
         # filename = image_file.filename
         # extension = filename.split('.')[1]
+        # print(UPLOAD_DIR)
         data = await image_file.read()
-        name = (
-            image_name
-            if image_name is not None
-            else image_file.filename
-            if image_file.filename is not None
-            else str(uuid4())
-        )
+        name = image_file.filename if image_file.filename is not None else str(uuid4())
         path = UPLOAD_DIR / name
         with open(path, "wb") as f:
             f.write(data)
-        i = Image.create_from_local_file(path, type=image_type)
+        i = Image.create_from_local_file(
+            path, calculate_palette=True
+        )  # , type=ImageType.character)
         try:
             self.db_session.add(i)
             self.db_session.commit()
@@ -247,3 +239,9 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
             self.db_session.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
         return i
+
+    def favourite_image(self, image_id: int):
+        pass
+
+    def unfavourite_image(self, image_id: int):
+        pass

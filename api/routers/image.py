@@ -8,17 +8,11 @@ from fastapi_pagination import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from api.schemas import (
-    Image,
-    ImageB64,
-    ImageCreate,
-    ImageFilter,
-    ImageScale,
-    ImageUpdate,
-    ImageURL,
-)
+from api.schemas import Image, ImageB64, ImageCreate, ImageFilter, ImageScale, ImageUpdate, ImageURL
 from api.services import ImageService, get_image_service
 from api.utils.filters import generate_filter_query
+
+# from core.colour import put_pallete_into_db
 from core.db import foreign_key
 
 router = APIRouter(prefix="/image")
@@ -118,6 +112,15 @@ async def update_image(
     return image_service.update(image_id, image)
 
 
+@router.post("/{image_id}/favourite", response_model=Image, tags=["images"])
+async def favourite_image(
+    self,
+    image_id: foreign_key,
+    image_service: Annotated[ImageService, Depends(get_image_service)],
+) -> models.Image:
+    return image_service.favourite_image(image_id)
+
+
 # @router.delete('/{image_id}/data', tags=['images'])
 # async def upload_image(
 #     image_id: foreign_key,
@@ -132,11 +135,15 @@ async def update_image(
 async def upload_image(
     image_file: UploadFile,
     # image: ImageUpload,
-    image_name: str,
-    image_type: models.ImageType,
+    # image_name: str,
+    # image_type: models.ImageType,
     image_service: Annotated[ImageService, Depends(get_image_service)],
+    # background_tasks: BackgroundTasks,
 ):
-    return image_service.upload_image(image_file, image_name, image_type)
+    i = await image_service.upload_image(image_file)  # , image_name, image_type)
+    # background_tasks.add_task(put_pallete_into_db, i, image_service.db_session)
+
+    return i
     # raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED)
     # image = image_service.get(image_id)
     # try:
@@ -225,4 +232,5 @@ async def get_image_as_base64(
     image_id: foreign_key,
     image_service: Annotated[ImageService, Depends(get_image_service)],
 ) -> Any:
+    return image_service.get_as_base64(image_id)
     return image_service.get_as_base64(image_id)
