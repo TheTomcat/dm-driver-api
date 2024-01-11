@@ -1,1 +1,3 @@
 api/routers/tag.py
+*.pyc
+*.pyo
