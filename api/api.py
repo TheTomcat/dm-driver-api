@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     # return "ok"
 
     from api.routers import (
+        collection,
         combat,
         entity,
         image,
@@ -82,9 +83,21 @@ def create_app() -> FastAPI:
     app.include_router(message.router)
     app.include_router(image.router)
     app.include_router(tag.router)
+    app.include_router(collection.router)
     app.include_router(ws.router)
 
     add_pagination(app)
+
+    # @app.exception_handler(RequestValidationError)
+    # async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    #     exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+    #     # or logger.error(f'{exc}')
+    #     logging.error(request, exc_str)
+    #     content = {"status_code": 10422, "message": exc_str, "data": None}
+    #     return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+    # app.openapi = custom_openapi(app)
+
     return app
 
 

@@ -30,8 +30,15 @@ image_entities = Table(
     Column("entity_id", ForeignKey("entities.id"), primary_key=True),
 )
 
-image_favourites = Table(
-    "image_favourites", Base.metadata, Column("image_id", ForeignKey("images.id"), primary_key=True)
+# image_favourites = Table(
+#     "image_favourites", Base.metadata, Column("image_id", ForeignKey("images.id"), primary_key=True)
+# )
+
+image_collections = Table(
+    "image_collections",
+    Base.metadata,
+    Column("image_id", ForeignKey("images.id"), primary_key=True),
+    Column("collection_id", ForeignKey("collections.id"), primary_key=True),
 )
 
 
@@ -75,6 +82,10 @@ class Image(Base):
     tags: Mapped[list["Tag"]] = relationship(back_populates="images", secondary=image_tags)
     type: Mapped[ImageType] = mapped_column(default=ImageType.backdrop)
     palette: Mapped[str] = mapped_column(String(50), nullable=True)
+
+    collections: Mapped[list["Collection"]] = relationship(
+        back_populates="images", secondary=image_collections
+    )
     # origin: Mapped[ImageOrigin] = mapped_column(default=ImageOrigin.cli)
     # attribution: Mapped[str] = mapped_column(String(50))
 
@@ -85,9 +96,10 @@ class Image(Base):
         with PImage.open(path) as f:
             (x, y) = f.size
             imhash = hash_fn(f)
+        name = kwargs.pop("name", path.name).split(".")[0]
         i = cls(
             path=str(path),
-            name=path.stem,
+            name=name,
             **kwargs,
             dimension_x=x,
             dimension_y=y,
@@ -110,6 +122,26 @@ class Image(Base):
             return i
         except UnidentifiedImageError:
             raise HTTPException(status_code=404, detail=f"Image at {uri} not found")
+
+    # def inject_urls(self, router: APIRouter, **context):
+    #     self.url = router.url_path_for("get_full_image", image_id=self.id)
+    #     self.thumbnail_url = router.url_path_for("get_image_thumbnail", image_id=self.id, **context)
+    #     return self
+
+    @property
+    def url(self):
+        return f"/image/{self.id}/full"
+
+    @property
+    def thumbnail_url(self):
+        return f"/image/{self.id}/thumb"
+
+
+# class Attribution(Base):
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     name: Mapped[str] = mapped_column(String(50))
+#     url: Mapped[str] = mapped_column(String(256))
+#     images: Mapped[list["Image"]] = relationship(back_populates="attribution")
 
 
 class Tag(Base):
@@ -222,6 +254,18 @@ class Entity(Base):
     source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
 
+
+class Collection(Base):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+
+    images: Mapped[list["Image"]] = relationship(
+        back_populates="collections", secondary=image_collections
+    )
+
+
+# class Favourite(Base):
+#     pass
 
 # class EntityData(Base):
 #     __tablename__ = "entitydata"  # type: ignore

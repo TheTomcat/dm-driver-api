@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from core.session import get_session
 
+from .collection import CollectionService
 from .combat import CombatService
 from .entity import EntityService
 from .image import ImageService
@@ -42,3 +43,9 @@ def get_participant_service(
 
 def get_entity_service(db_session: Annotated[Session, Depends(get_session)]) -> EntityService:
     return EntityService(db_session)
+
+
+def get_collection_service(
+    db_session: Annotated[Session, Depends(get_session)]
+) -> CollectionService:
+    return CollectionService(db_session)

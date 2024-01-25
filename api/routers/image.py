@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Any, Optional
 
 from fastapi import Depends, Query, Response, UploadFile
@@ -18,17 +17,20 @@ from core.db import foreign_key
 router = APIRouter(prefix="/image")
 
 
-def build_transformer(router: APIRouter, **context):
-    return lambda x: list(map(partial(inject_urls, router=router, **context), x))
+# def build_transformer(router: APIRouter, **context):
+#     return lambda x: list(map(partial(inject_urls, router=router, **context), x))  # type: ignore
 
 
-def inject_urls(model: models.Image, router: APIRouter, **context):
-    model = model
-    url = router.url_path_for("get_full_image", image_id=model.id)
-    thumbnail_url = router.url_path_for("get_image_thumbnail", image_id=model.id, **context)
-    model.url = url  # type: ignore
-    model.thumbnail_url = thumbnail_url  # type: ignore
-    return model
+# def inject_urls(model: models.Image, router: APIRouter, **context):
+#     return model.inject_urls(router, **context)
+# url = router.url_path_for("get_full_image", image_id=model.id)
+# thumbnail_url = router.url_path_for("get_image_thumbnail", image_id=model.id, **context)
+# model.url = url  # type: ignore
+# model.thumbnail_url = thumbnail_url  # type: ignore
+# return model
+
+
+# def inject_urls(model: Image, url: str, thumbnail_url: str) -> ImageURL:
 
 
 @router.get("/", response_model=Page[ImageURL], tags=["images"])
@@ -39,7 +41,7 @@ async def list_images(
 ) -> Page[models.Image]:
     "Get all images"
     q = generate_filter_query(models.Image, image_filter)
-    return image_service.get_some(q, transformer=build_transformer(router))
+    return image_service.get_some(q)  # , transformer=build_transformer(router))
 
 
 @router.get("/tag", tags=["images"])
@@ -48,12 +50,20 @@ async def get_image_tag_matches(
     image_filter: Annotated[ImageFilter, Depends()],
     image_service: Annotated[ImageService, Depends(get_image_service)],
 ) -> Page[ImageURL]:  # ImageMatchResult:
-    def transformer(i):
-        return inject_urls(i, router)
+    # def transformer(i):
+    # return inject_urls(i, router)
 
     q = generate_filter_query(models.Image, image_filter)
-    return image_service.get_images(q, taglist, transformer=build_transformer(router))
+    return image_service.get_images(q, taglist)  # , transformer=build_transformer(router))
     # return image_service.get_images_by_tag_match(taglist, transformer=transformer)
+
+
+# @router.get("/search", tags=["images"])
+# async def smart_search(
+#     q: str,
+#     image_service: Annotated[ImageService, Depends(get_image_service)],
+# ) -> Page[ImageURL]:
+#     return image_service.smart_search(query=q)
 
 
 @router.get(
@@ -68,7 +78,8 @@ async def get_random_image(
     # current_user: CurrentActiveUser,
 ) -> models.Image:
     "Get a single random image"
-    return inject_urls(image_service.get_random(models.Image.type == image_type), router)
+    return image_service.get_random(models.Image.type == image_type)
+    # return inject_urls(image_service.get_random(models.Image.type == image_type), router)
 
 
 @router.get(
@@ -83,7 +94,8 @@ async def get_image(
     # current_user: CurrentActiveUser,
 ) -> models.Image:
     "Get a single image by id"
-    return inject_urls(image_service.get(image_id), router)
+    return image_service.get(image_id)
+    # return inject_urls(image_service.get(image_id), router)
 
 
 @router.post(
@@ -112,26 +124,16 @@ async def update_image(
     return image_service.update(image_id, image)
 
 
-@router.post("/{image_id}/favourite", response_model=Image, tags=["images"])
-async def favourite_image(
-    self,
-    image_id: foreign_key,
-    image_service: Annotated[ImageService, Depends(get_image_service)],
-) -> models.Image:
-    return image_service.favourite_image(image_id)
-
-
-# @router.delete('/{image_id}/data', tags=['images'])
-# async def upload_image(
+# @router.post("/{image_id}/favourite", response_model=Image, tags=["images"])
+# async def favourite_image(
+#     self,
 #     image_id: foreign_key,
 #     image_service: Annotated[ImageService, Depends(get_image_service)],
-# ):
-#     image = image_service.get(image_id)
-#     return Response(status_code=status.HTTP_200_OK)
-#         # filedata = await imdata.read()
+# ) -> models.Image:
+#     return image_service.favourite_image(image_id)
 
 
-@router.post("/upload", tags=["images"])
+@router.post("/upload", response_model=ImageURL, tags=["images"])
 async def upload_image(
     image_file: UploadFile,
     # image: ImageUpload,
@@ -234,3 +236,23 @@ async def get_image_as_base64(
 ) -> Any:
     return image_service.get_as_base64(image_id)
     return image_service.get_as_base64(image_id)
+
+
+@router.patch("/{image_id}/collection", response_model=Image, tags=["images"])
+async def add_to_collection(
+    image_id: foreign_key,
+    collection_id: foreign_key,
+    image_service: Annotated[ImageService, Depends(get_image_service)],
+    # current_user: CurrentActiveUser,
+) -> models.Image:
+    return image_service.add_to_collection(image_id, collection_id)
+
+
+@router.delete("/{image_id}/collection", response_model=Image, tags=["images"])
+async def remove_from_collection(
+    image_id: foreign_key,
+    collection_id: foreign_key,
+    image_service: Annotated[ImageService, Depends(get_image_service)],
+    # current_user: CurrentActiveUser,
+) -> Optional[models.Image]:
+    return image_service.remove_from_collection(image_id, collection_id)

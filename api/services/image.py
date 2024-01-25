@@ -11,7 +11,7 @@ from sqlalchemy import Select, delete, func, insert, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from api.models import Image, Tag, image_tags
+from api.models import Image, Tag, image_collections, image_tags
 from api.schemas import ImageB64, ImageCreate, ImageMatchResult, ImageScale, ImageUpdate, ImageURL
 from api.utils.image_helper import calculate_thumbnail_size, get_image_as_base64
 from config import get_settings
@@ -19,7 +19,8 @@ from config import get_settings
 from .base import BaseService
 
 settings = get_settings()
-UPLOAD_DIR = Path("C:\\dev\\test")
+
+# UPLOAD_DIR = Path("C:\\dev\\test")
 
 
 class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
@@ -27,7 +28,10 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
         super(ImageService, self).__init__(Image, db_session)
 
     def get_random(self, *conditions) -> Image:
-        return self.db_session.scalar(select(Image).where(*conditions).order_by(func.random()))
+        model = self.db_session.scalar(select(Image).where(*conditions).order_by(func.random()))
+        if not model:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return model
 
     def apply_tag(self, image_id, tag_id) -> Image:
         try:
@@ -90,6 +94,43 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
         image.tags = [*tag_objs]
         self.db_session.commit()
         return image
+
+    def add_to_collection(self, image_id, collection_id) -> Image:
+        try:
+            q = insert(image_collections).values(image_id=image_id, collection_id=collection_id)
+            self.db_session.execute(q)
+        except DBAPIError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Database error - perhaps the image is already in that collection?",
+            )
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong"
+            )
+        self.db_session.commit()
+        return self.get(image_id)
+
+    def remove_from_collection(self, image_id, collection_id) -> Image:
+        try:
+            q = delete(image_collections).where(
+                image_collections.c.image_id == image_id,
+                image_collections.c.collection_id == collection_id,
+            )
+            self.db_session.execute(q)
+        except DBAPIError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Database error - perhaps the image is not in that collection",
+            )
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Something went wrong."
+            )
+        self.db_session.commit()
+        return self.get(image_id)
 
     def get_images_by_tag_match(self, taglist: list[int], transformer=None) -> ImageMatchResult:  # type: ignore
         # raise DeprecationWarning
@@ -225,11 +266,13 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
         # print(UPLOAD_DIR)
         data = await image_file.read()
         name = image_file.filename if image_file.filename is not None else str(uuid4())
-        path = UPLOAD_DIR / name
+        path = Path(settings.UPLOAD_DIR) / name
+        if path.exists():
+            path = path.with_stem(str(uuid4()))
         with open(path, "wb") as f:
             f.write(data)
         i = Image.create_from_local_file(
-            path, calculate_palette=True
+            path, calculate_palette=True, name=name
         )  # , type=ImageType.character)
         try:
             self.db_session.add(i)
@@ -245,3 +288,20 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
 
     def unfavourite_image(self, image_id: int):
         pass
+
+    def smart_search(self, query: str) -> Page[ImageURL]:
+        raise NotImplementedError("This feature is current not implemented")
+        params = query.lower().split(" ")
+        q = select(self.model)
+        s = (
+            select(Image.id, func.count(image_tags.c.image_id).label("match_count"))
+            .join(Image, Image.id == image_tags.c.image_id)
+            .join(Tag, Tag.id == image_tags.c.tag_id)
+        )
+        for param in params:
+            s = s.where(Tag.tag.ilike(param))
+
+            # image_tags.c.tag_id.in_(taglist))
+        s = s.group_by(image_tags.c.image_id).order_by(text("match_count DESC")).subquery()
+        q = q.join(s, s.c.id == Image.id)
+        return paginate(self.db_session, q)

@@ -119,6 +119,10 @@ class ImageFilter(BaseFilter):
     # taglist: Optional[list[int]] = Query(default=None)
 
 
+class CollectionFilter(BaseFilter):
+    name: Optional[str] = None
+
+
 #################### TAgs
 
 
@@ -167,6 +171,38 @@ class TagById(BaseModel):
     )
 
 
+############### Collections
+
+
+collection_alias = camel_alias_generator("collection")
+
+
+class CollectionBase(BaseModel):
+    """Shared properties."""
+
+    name: str
+
+    model_config = ConfigDict(alias_generator=collection_alias, populate_by_name=True)
+
+
+class CollectionCreate(CollectionBase):
+    """Properties to receive on item creation."""
+
+    ...
+
+
+class CollectionUpdate(CollectionBase):
+    """Properties to receive on item update. Don't need id, as PUTting to /parents/{id}"""
+
+    ...
+
+
+class CollectionInDB(CollectionBase):
+    """Properties shared by models stored in DB - !exposed in create/update."""
+
+    id: foreign_key
+
+
 ############### Image
 
 image_alias = camel_alias_generator("image")
@@ -197,7 +233,7 @@ class ImageCreate(ImageBase):
     hash: Optional[str]
     dimension_x: int
     dimension_y: int
-    path: str
+    # path: str
     name: str
 
 
@@ -212,13 +248,14 @@ class ImageUpdate(BaseModel):
     focus_y: Optional[int] = None
     dimension_x: Optional[int] = None
     dimension_y: Optional[int] = None
-    path: Optional[str] = None
+    # path: Optional[str] = None
     type: Optional[ImageType] = None
 
 
 class Image(ImageCreate):
     id: foreign_key
     tags: list["Tag"]
+    # collections: list["CollectionInDB"]
     palette: Optional[str] = ""
 
     model_config = ConfigDict(
@@ -229,6 +266,17 @@ class Image(ImageCreate):
 class ImageURL(Image):
     url: str  # = "None"
     thumbnail_url: str  # = "None"
+
+
+class Collection(CollectionInDB):
+    """Properties to return to client"""
+
+    images: list["ImageURL"]
+
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=collection_alias, populate_by_name=True
+    )
+    #
 
 
 # class ImageCreateData(BaseModel):
