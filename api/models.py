@@ -86,6 +86,10 @@ class Image(Base):
     collections: Mapped[list["Collection"]] = relationship(
         back_populates="images", secondary=image_collections
     )
+
+    entities: Mapped[list["Entity"]] = relationship(back_populates="image")
+    # entities: Mapped['Entity'] = relationship(back_populates="images", secondary=image_entities)
+
     # origin: Mapped[ImageOrigin] = mapped_column(default=ImageOrigin.cli)
     # attribution: Mapped[str] = mapped_column(String(50))
 

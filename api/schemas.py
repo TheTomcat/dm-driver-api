@@ -107,20 +107,59 @@ class TagFilter(BaseFilter):
 class EntityFilter(BaseFilter):
     name: Optional[str] = ""
     is_PC: Optional[bool] = None
+    has_image: Optional[bool] = None
+    has_data: Optional[bool] = None
+    cr: Optional[str] = None
+    # is_NPC: Optional[bool] = None
 
 
 class CombatFilter(BaseFilter):
     title: Optional[str] = ""
+    combat_participants_at_least: Optional[int] = None
+    combat_participants_at_most: Optional[int] = None
+    combat_participants_name: Optional[str] = None
 
 
 class ImageFilter(BaseFilter):
+    name: Optional[str] = None
     type: Optional[ImageType] = None
     types: Optional[str] = None
-    # taglist: Optional[list[int]] = Query(default=None)
 
 
 class CollectionFilter(BaseFilter):
     name: Optional[str] = None
+
+
+#################### SORT
+
+
+class SortOption(enum.StrEnum):
+    desc = enum.auto()
+    asc = enum.auto()
+    NONE = enum.auto()
+
+
+class BaseSort(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SortBy(BaseSort):
+    sort_by: Optional[str] = None
+    sort_dir: SortOption = SortOption.NONE
+
+
+class CombatSortBy(SortBy):
+    sort_by: Optional[Literal["title"] | Literal["count"]] = None
+
+
+class ImageSortBy(SortBy):
+    sort_by: Optional[Literal["name"]] = None
+
+
+class EntitySortBy(SortBy):
+    sort_by: Optional[
+        Literal["name"] | Literal["ac"] | Literal["cr"] | Literal["initiative"]
+    ] = None
 
 
 #################### TAgs
@@ -203,6 +242,57 @@ class CollectionInDB(CollectionBase):
     id: foreign_key
 
 
+######################## Entity
+entity_alias = camel_alias_generator("entity")
+
+
+class EntityBase(BaseModel):
+    name: str = ""
+    image_id: Optional[foreign_key] = None
+    is_PC: bool = False
+    hit_dice: str = ""
+    ac: int = 10
+    cr: str = "0"
+    initiative_modifier: int = 0
+    source: Optional[str] = None
+    source_page: Optional[int] = None
+    # data: Optional[bytes] = None
+
+    model_config = ConfigDict(alias_generator=entity_alias, populate_by_name=True)
+
+
+class EntityUpdate(EntityBase):
+    name: Optional[str] = None
+    image_id: Optional[foreign_key] = None
+    is_PC: Optional[bool] = None
+    hit_dice: Optional[str] = None
+    ac: Optional[int] = None
+    cr: Optional[str] = None
+    initiative_modifier: Optional[int] = None
+    source: Optional[str] = None
+    source_page: Optional[int] = None
+
+
+class EntityCreate(EntityBase):
+    ...
+
+
+class Entity(EntityBase):
+    id: foreign_key
+    data: Optional[bytes]
+
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=entity_alias, populate_by_name=True
+    )
+
+
+class EntityByID(BaseModel):
+    id: foreign_key
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=entity_alias, populate_by_name=True
+    )
+
+
 ############### Image
 
 image_alias = camel_alias_generator("image")
@@ -257,6 +347,7 @@ class Image(ImageCreate):
     tags: list["Tag"]
     # collections: list["CollectionInDB"]
     palette: Optional[str] = ""
+    entities: list["EntityByID"] = []
 
     model_config = ConfigDict(
         from_attributes=True, alias_generator=image_alias, populate_by_name=True
@@ -268,6 +359,13 @@ class ImageURL(Image):
     thumbnail_url: str  # = "None"
 
 
+class ImageByID(BaseModel):
+    id: foreign_key
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=image_alias, populate_by_name=True
+    )
+
+
 class Collection(CollectionInDB):
     """Properties to return to client"""
 
@@ -277,6 +375,13 @@ class Collection(CollectionInDB):
         from_attributes=True, alias_generator=collection_alias, populate_by_name=True
     )
     #
+
+
+class CollectionByID(BaseModel):
+    id: foreign_key
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=collection_alias, populate_by_name=True
+    )
 
 
 # class ImageCreateData(BaseModel):
@@ -479,50 +584,6 @@ class Combat(CombatBase):
     is_active: bool = False
     model_config = ConfigDict(
         from_attributes=True, alias_generator=combat_alias, populate_by_name=True
-    )
-
-
-######################## Entity
-entity_alias = camel_alias_generator("entity")
-
-
-class EntityBase(BaseModel):
-    name: str = ""
-    image_id: Optional[foreign_key] = None
-    is_PC: bool = False
-    hit_dice: str = ""
-    ac: int = 10
-    cr: str = "0"
-    initiative_modifier: int = 0
-    source: Optional[str] = None
-    source_page: Optional[int] = None
-    # data: Optional[bytes] = None
-
-    model_config = ConfigDict(alias_generator=entity_alias, populate_by_name=True)
-
-
-class EntityUpdate(EntityBase):
-    name: Optional[str] = None
-    image_id: Optional[foreign_key] = None
-    is_PC: Optional[bool] = None
-    hit_dice: Optional[str] = None
-    ac: Optional[int] = None
-    cr: Optional[str] = None
-    initiative_modifier: Optional[int] = None
-    source: Optional[str] = None
-    source_page: Optional[int] = None
-
-
-class EntityCreate(EntityBase):
-    ...
-
-
-class Entity(EntityBase):
-    id: foreign_key
-    data: Optional[bytes]
-
-    model_config = ConfigDict(
-        from_attributes=True, alias_generator=entity_alias, populate_by_name=True
     )
 
     # @model_validator(mode="before")

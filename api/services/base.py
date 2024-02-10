@@ -28,7 +28,7 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return obj
 
     def get_all(self) -> Page[ModelType]:
-        query = select(self.model)
+        query = select(self.model)  # .order_by(self.model.id.desc())
         return paginate(self.db_session, query)
 
     def get_some(self, q: Optional[Select] = None, transformer=None) -> Page[ModelType]:

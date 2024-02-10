@@ -11,13 +11,14 @@ from api.schemas import (
     Entity,
     EntityCreate,
     EntityFilter,
+    EntitySortBy,
     EntityUpdate,
 )
 
 # from api.db.schemas.filters import EntityFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
 from api.services import EntityService, get_entity_service
-from api.utils.filters import generate_filter_query
+from api.utils.filters import generate_filter_query, generate_sort_query
 from core.db import foreign_key
 
 router = APIRouter(prefix="/entity")
@@ -27,10 +28,12 @@ router = APIRouter(prefix="/entity")
 async def list_entities(
     entity_service: Annotated[EntityService, Depends(get_entity_service)],
     entity_filter: Annotated[EntityFilter, Depends()],
+    sort_by: Annotated[EntitySortBy, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Entity]:
     "Get all entities"
     q = generate_filter_query(models.Entity, entity_filter)
+    q = generate_sort_query(q, models.Entity, sort_by)
     return entity_service.get_some(q)
 
 
