@@ -135,12 +135,12 @@ def generate_sort_query(q: Select, model, order: SortBy) -> Select:
     sort_statement = model.id
     match order.sort_by:
         case "title":
-            sort_statement = model.title
+            sort_statement = func.lower(model.title)
         case "name":
-            sort_statement = model.name
+            sort_statement = func.lower(model.name)
         case "id":
             sort_statement = model.id
-        case "count":
+        case "num_participants":
             if order.sort_dir == SortOption.desc:
                 q = (
                     q.join(Participant)
@@ -160,6 +160,8 @@ def generate_sort_query(q: Select, model, order: SortBy) -> Select:
             sort_statement = model.cr
         case "initiative":
             sort_statement = model.initiative_modifier
+        case "dimensions":
+            sort_statement = model.dimension_x * model.dimension_y
     if order.sort_dir == SortOption.desc and sort_statement is not None:
         sort_statement = sort_statement.desc()
     if order.sort_dir != SortOption.NONE and sort_statement is not None:

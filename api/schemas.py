@@ -149,11 +149,11 @@ class SortBy(BaseSort):
 
 
 class CombatSortBy(SortBy):
-    sort_by: Optional[Literal["title"] | Literal["count"]] = None
+    sort_by: Optional[Literal["title"] | Literal["num_participants"]] = None
 
 
 class ImageSortBy(SortBy):
-    sort_by: Optional[Literal["name"]] = None
+    sort_by: Optional[Literal["name"] | Literal["type"] | Literal["dimensions"]] = None
 
 
 class EntitySortBy(SortBy):

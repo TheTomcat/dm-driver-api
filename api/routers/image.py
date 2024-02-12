@@ -7,9 +7,18 @@ from fastapi_pagination import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from api.schemas import Image, ImageB64, ImageCreate, ImageFilter, ImageScale, ImageUpdate, ImageURL
+from api.schemas import (
+    Image,
+    ImageB64,
+    ImageCreate,
+    ImageFilter,
+    ImageScale,
+    ImageUpdate,
+    ImageURL,
+    SortBy,
+)
 from api.services import ImageService, get_image_service
-from api.utils.filters import generate_filter_query
+from api.utils.filters import generate_filter_query, generate_sort_query
 
 # from core.colour import put_pallete_into_db
 from core.db import foreign_key
@@ -37,10 +46,12 @@ router = APIRouter(prefix="/image")
 async def list_images(
     image_service: Annotated[ImageService, Depends(get_image_service)],
     image_filter: Annotated[ImageFilter, Depends()],
+    sort_by: Annotated[SortBy, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Image]:
     "Get all images"
     q = generate_filter_query(models.Image, image_filter)
+    q = generate_sort_query(q, models.Image, sort_by)
     return image_service.get_some(q)  # , transformer=build_transformer(router))
 
 
