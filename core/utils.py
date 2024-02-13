@@ -99,3 +99,49 @@ def hex_to_rgb(hexstr: str) -> tuple:
         hexstr = hexstr[1:]
     h = lambda x: int(x, base=16)  # noqa: E731
     return tuple(h(hexstr[2 * i : 2 * i + 2]) for i in range(3))
+
+
+# DECODECR = {i: f"{i}" for i in range(31)}
+# DECODECR.update({-1: "1/2", -2: "1/4", -3: "1/8"})
+# ENCODECR = {val: key for key, val in DECODECR.items()}
+
+
+def decodeCR(cr_DB: float | None) -> str | None:
+    """Take a float from the set {0, 0.125, 0.25, 0.5, 1, ... ,31}
+    and return its corresponding CR. Returns None otherwise"""
+    if cr_DB is None:
+        return None
+    cr_int = int(cr_DB)
+    if cr_int == cr_DB and 0 <= cr_int <= 31:
+        return f"{cr_int}"
+    if 0 < cr_DB < 1:
+        cr_inverse = int(1 / cr_DB)
+        if cr_inverse in [2, 4, 8]:
+            return f"1/{cr_inverse}"
+    return None
+    # return DECODECR.get(cr_DB, None)
+
+
+def encodeCR(cr_str: str | None) -> float | None:
+    """Take a CR in string form (either an int or 1/int) and return the float"""
+    if cr_str is None:
+        return None
+    match cr_str:
+        case "1/8":
+            return 0.125
+        case "1/4":
+            return 0.25
+        case "1/2":
+            return 0.5
+    if cr_str == f"{int(cr_str)}":
+        return int(cr_str)
+
+    # return ENCODECR.get(cr_str, None)
+
+
+def validateCR():
+    test = [i for i in range(31)]
+    test = [0.125, 0.25, 0.5, *test]
+    out = [decodeCR(i) for i in test]
+    out2 = [encodeCR(i) for i in out]
+    return out2 == test
