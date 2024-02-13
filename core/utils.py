@@ -124,7 +124,7 @@ def decodeCR(cr_DB: float | None) -> str | None:
 
 def encodeCR(cr_str: str | None) -> float | None:
     """Take a CR in string form (either an int or 1/int) and return the float"""
-    if cr_str is None:
+    if cr_str is None or cr_str == "":
         return None
     match cr_str:
         case "1/8":

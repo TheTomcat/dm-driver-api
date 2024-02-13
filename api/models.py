@@ -249,7 +249,7 @@ class Entity(Base):
     image_id: Mapped[Optional[int]] = mapped_column(ForeignKey("images.id"), nullable=True)
     image: Mapped[Optional[Image]] = relationship("Image")
 
-    cr: Mapped[str] = mapped_column(String(10), default="")
+    cr: Mapped[float] = mapped_column(nullable=True)
     hit_dice: Mapped[str] = mapped_column(String(50), insert_default="")
     ac: Mapped[int] = mapped_column(default=10)
     initiative_modifier: Mapped[int] = mapped_column(default=0)

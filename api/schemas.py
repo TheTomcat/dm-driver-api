@@ -109,7 +109,7 @@ class EntityFilter(BaseFilter):
     is_PC: Optional[bool] = None
     has_image: Optional[bool] = None
     has_data: Optional[bool] = None
-    cr: Optional[str] = None
+    cr: Optional[float] = None
     # is_NPC: Optional[bool] = None
 
 
@@ -252,7 +252,7 @@ class EntityBase(BaseModel):
     is_PC: bool = False
     hit_dice: str = ""
     ac: int = 10
-    cr: str = "0"
+    cr: Optional[float] = None
     initiative_modifier: int = 0
     source: Optional[str] = None
     source_page: Optional[int] = None
@@ -267,7 +267,7 @@ class EntityUpdate(EntityBase):
     is_PC: Optional[bool] = None
     hit_dice: Optional[str] = None
     ac: Optional[int] = None
-    cr: Optional[str] = None
+    cr: Optional[float] = None
     initiative_modifier: Optional[int] = None
     source: Optional[str] = None
     source_page: Optional[int] = None
