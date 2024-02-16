@@ -8,6 +8,7 @@ from pydantic import (
     ValidationError,
     model_validator,
 )
+from typing_extensions import Self
 
 from api.models import ImageType
 from core.db import foreign_key
@@ -109,7 +110,8 @@ class EntityFilter(BaseFilter):
     is_PC: Optional[bool] = None
     has_image: Optional[bool] = None
     has_data: Optional[bool] = None
-    cr: Optional[float] = None
+    cr: Optional[str] = None
+    source: Optional[str] = None
     # is_NPC: Optional[bool] = None
 
 
@@ -153,13 +155,24 @@ class CombatSortBy(SortBy):
 
 
 class ImageSortBy(SortBy):
-    sort_by: Optional[Literal["name"] | Literal["type"] | Literal["dimensions"]] = None
+    sort_by: Optional[
+        Literal["name"] | Literal["type"] | Literal["dimensions"] | Literal["seq"]
+    ] = None
 
 
 class EntitySortBy(SortBy):
     sort_by: Optional[
-        Literal["name"] | Literal["ac"] | Literal["cr"] | Literal["initiative"]
+        Literal["name"]
+        | Literal["ac"]
+        | Literal["cr"]
+        | Literal["initiative"]
+        | Literal["source"]
+        | Literal["seq"]
     ] = None
+
+
+class MessageSortBy(SortBy):
+    sort_by: Optional[Literal["message"]] = None
 
 
 #################### TAgs
@@ -280,6 +293,7 @@ class EntityCreate(EntityBase):
 class Entity(EntityBase):
     id: foreign_key
     data: Optional[bytes]
+    seq: Optional[str] = None
 
     model_config = ConfigDict(
         from_attributes=True, alias_generator=entity_alias, populate_by_name=True
@@ -348,6 +362,7 @@ class Image(ImageCreate):
     # collections: list["CollectionInDB"]
     palette: Optional[str] = ""
     entities: list["EntityByID"] = []
+    seq: Optional[str] = None
 
     model_config = ConfigDict(
         from_attributes=True, alias_generator=image_alias, populate_by_name=True
@@ -415,7 +430,7 @@ class ImageScale(BaseModel):
     scale: Optional[float] = None
 
     @model_validator(mode="after")
-    def check_appropriate_params(self) -> "ImageScale":
+    def check_appropriate_params(self) -> "Self":
         if (self.width or self.height) and self.scale:  # Given width/height and scale
             raise ValidationError
         if not (self.width and self.height and self.scale):

@@ -1,6 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, UploadFile
 from fastapi_pagination import Page
 
 # from fastapi_pagination.links import Page
@@ -37,6 +37,13 @@ async def list_entities(
     return entity_service.get_some(q)
 
 
+@router.get("/sources", tags=["entities"])
+async def get_entity_sources(
+    entity_service: Annotated[EntityService, Depends(get_entity_service)],
+) -> Sequence[str | None]:
+    return entity_service.get_sources()
+
+
 @router.get(
     "/{entity_id}",
     response_model=Entity,
@@ -66,6 +73,23 @@ async def create_entity(
 ) -> models.Entity:
     "Create a new entity"
     return entity_service.create(entity)
+
+
+@router.post(
+    "/json",
+    # response_model=Entity,
+    status_code=201,
+    responses={409: {"description": "Conflict Error"}},
+    tags=["entities"],
+)
+async def create_entity_from_json(
+    entity_file: UploadFile,
+    entity_service: Annotated[EntityService, Depends(get_entity_service)],
+    # current_user: CurrentActiveUser,
+) -> Any:
+    "Create a new entity"
+    e = await entity_service.create_from_json(entity_file)
+    return e
 
 
 @router.patch("/{entity_id}", response_model=Entity, tags=["entities"])

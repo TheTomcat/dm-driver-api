@@ -2,7 +2,7 @@ import enum
 import random
 import re
 from datetime import date, datetime
-from typing import Union
+from typing import Optional, Union
 
 
 # https://towardsdatascience.com/detection-of-duplicate-images-using-image-hash-functions-4d9c53f04a75
@@ -89,6 +89,14 @@ def build_stub(i: int) -> str:
     return ""
 
 
+CHARS = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def make_seq(i: Optional[int] = None, length=16) -> str:
+    r = random.Random(i)
+    return "".join(r.choices(CHARS, k=length))
+
+
 def rgb_to_hex(rgb) -> str:
     h = lambda x: f"{hex(x)[2:]:0>2}"  # noqa: E731
     return f'#{"".join(map(h, rgb))}'
@@ -139,9 +147,29 @@ def encodeCR(cr_str: str | None) -> float | None:
     # return ENCODECR.get(cr_str, None)
 
 
-def validateCR():
+def validateCR():  # Test suite
     test = [i for i in range(31)]
     test = [0.125, 0.25, 0.5, *test]
     out = [decodeCR(i) for i in test]
     out2 = [encodeCR(i) for i in out]
     return out2 == test
+
+
+def extract_AC(c: dict) -> int | None:
+    ac = c.get("ac", [None])[0]
+    if ac is None:
+        return None
+    if isinstance(ac, int):
+        return ac
+    if isinstance(ac, dict):
+        return ac.get("ac")
+    return None
+
+
+def extract_CR(c: dict) -> float | None:
+    cr = c.get("cr")
+    if cr is None:
+        return None
+    if isinstance(cr, str):
+        return encodeCR(cr)
+    return encodeCR(cr.get("cr"))

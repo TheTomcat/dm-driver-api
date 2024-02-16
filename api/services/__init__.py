@@ -11,7 +11,8 @@ from .entity import EntityService
 from .image import ImageService
 from .message import MessageService
 from .participant import ParticipantService
-from .session import SessionService
+
+# from .session import SessionService
 from .tag import TagService
 
 
@@ -27,8 +28,8 @@ def get_message_service(db_session: Annotated[Session, Depends(get_session)]) ->
     return MessageService(db_session)
 
 
-def get_session_service(db_session: Annotated[Session, Depends(get_session)]) -> SessionService:
-    return SessionService(db_session)
+# def get_session_service(db_session: Annotated[Session, Depends(get_session)]) -> SessionService:
+#     return SessionService(db_session)
 
 
 def get_combat_service(db_session: Annotated[Session, Depends(get_session)]) -> CombatService:

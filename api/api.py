@@ -55,7 +55,6 @@ def create_app() -> FastAPI:
         image,
         message,
         participant,
-        session,
         tag,
         ws,
     )
@@ -79,7 +78,7 @@ def create_app() -> FastAPI:
     app.include_router(entity.router)
     app.include_router(participant.router)
     app.include_router(combat.router)
-    app.include_router(session.router)
+    # app.include_router(session.router)
     app.include_router(message.router)
     app.include_router(image.router)
     app.include_router(tag.router)

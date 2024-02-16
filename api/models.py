@@ -1,5 +1,5 @@
 import enum
-import math
+import json
 import pathlib
 import random
 from typing import Optional
@@ -14,7 +14,7 @@ from sqlalchemy.types import BLOB
 
 from core.colour import extract_pallete
 from core.db import Base
-from core.utils import rgb_to_hex, roll
+from core.utils import extract_AC, extract_CR, make_seq, rgb_to_hex, roll
 
 image_tags = Table(
     "image_tags",
@@ -49,19 +49,10 @@ class ImageType(enum.Enum):
     map = "map"
 
 
-class ImageOrigin(enum.Enum):
-    cli = "cli"
+class ImageFileMode(enum.Enum):
+    local = "local"
     url = "url"
-    upload = "upload"
-
-
-class SessionMode(enum.Enum):
-    loading = "loading"
-    backdrop = "backdrop"
-    combat = "combat"
-    handout = "handout"
-    map = "map"
-    empty = "empty"
+    hosted = "hosted"
 
 
 def hash_fn(f):
@@ -88,6 +79,9 @@ class Image(Base):
     )
 
     entities: Mapped[list["Entity"]] = relationship(back_populates="image")
+
+    seq: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    # mode: Mapped[ImageFileMode] = mapped_column(default=ImageFileMode.local)
     # entities: Mapped['Entity'] = relationship(back_populates="images", secondary=image_entities)
 
     # origin: Mapped[ImageOrigin] = mapped_column(default=ImageOrigin.cli)
@@ -100,7 +94,7 @@ class Image(Base):
         with PImage.open(path) as f:
             (x, y) = f.size
             imhash = hash_fn(f)
-        name = kwargs.pop("name", path.name).split(".")[0]
+        name = kwargs.pop("name", path.stem)
         i = cls(
             path=str(path),
             name=name,
@@ -165,20 +159,20 @@ class Message(Base):
     message: Mapped[str] = mapped_column(String(400))
 
 
-class Session(Base):
-    # __tablename__ = "sessions"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(100))
-    backdrop_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
-    backdrop: Mapped["Image"] = relationship("Image", foreign_keys=[backdrop_id])
-    overlay_image_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
-    overlay_image: Mapped["Image"] = relationship("Image", foreign_keys=[overlay_image_id])
-    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"), nullable=True)
-    message: Mapped["Message"] = relationship("Message")
-    combat_id: Mapped[int] = mapped_column(ForeignKey("combat.id"), nullable=True)
-    combat: Mapped["Combat"] = relationship("Combat")
+# class Session(Base):
+#     # __tablename__ = "sessions"
+#     id: Mapped[int] = mapped_column(primary_key=True)
+#     title: Mapped[str] = mapped_column(String(100))
+#     backdrop_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
+#     backdrop: Mapped["Image"] = relationship("Image", foreign_keys=[backdrop_id])
+#     overlay_image_id: Mapped[int] = mapped_column(ForeignKey("images.id"), nullable=True)
+#     overlay_image: Mapped["Image"] = relationship("Image", foreign_keys=[overlay_image_id])
+#     message_id: Mapped[int] = mapped_column(ForeignKey("messages.id"), nullable=True)
+#     message: Mapped["Message"] = relationship("Message")
+#     combat_id: Mapped[int] = mapped_column(ForeignKey("combat.id"), nullable=True)
+#     combat: Mapped["Combat"] = relationship("Combat")
 
-    mode: Mapped[str] = mapped_column(String(8), default="empty")  # SessionMode.empty)
+#     mode: Mapped[str] = mapped_column(String(8), default="empty")  # SessionMode.empty)
 
 
 class Combat(Base):
@@ -257,6 +251,26 @@ class Entity(Base):
     data: Mapped[bytes] = mapped_column(BLOB, nullable=True)
     source: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     source_page: Mapped[Optional[int]] = mapped_column(nullable=True)
+
+    seq: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+
+    @staticmethod
+    def from_jsondata(json_dict: dict, seq: Optional[str] = None):
+        if seq is None:
+            seq = make_seq()
+        e = Entity(
+            name=json_dict.get("name"),
+            is_PC=False,
+            cr=extract_CR(json_dict),
+            ac=extract_AC(json_dict),
+            hit_dice=json_dict.get("hp", dict()).get("formula", ""),
+            initiative_modifier=json_dict.get("dex", 10),
+            source=json_dict.get("source"),
+            source_page=json_dict.get("page"),
+            data=json.dumps(json_dict).encode(),
+            seq=seq,
+        )
+        return e
 
 
 class Collection(Base):
@@ -338,62 +352,62 @@ class Collection(Base):
 #     material_component: Mapped[str] = mapped_column(String(50), nullable=True)
 
 
-class Focus:
-    def __init__(self, image: Image, focus=None):
-        self.image = image
-        self.dx = image.dimension_x
-        self.dy = image.dimension_y
-        if focus:
-            self.fx = focus[0]
-            self.fy = focus[1]
-        elif self.image.focus_x is not None:
-            self.fx = self.image.focus_x
-            self.fy = self.image.focus_y
-        else:
-            self.fx = -400 + self.dx / 2
-            self.fy = self.dy / 2 - 400
+# class Focus:
+#     def __init__(self, image: Image, focus=None):
+#         self.image = image
+#         self.dx = image.dimension_x
+#         self.dy = image.dimension_y
+#         if focus:
+#             self.fx = focus[0]
+#             self.fy = focus[1]
+#         elif self.image.focus_x is not None:
+#             self.fx = self.image.focus_x
+#             self.fy = self.image.focus_y
+#         else:
+#             self.fx = -400 + self.dx / 2
+#             self.fy = self.dy / 2 - 400
 
-    @property
-    def params(self):
-        return self.fx, self.fy, self.dx, self.dy
+#     @property
+#     def params(self):
+#         return self.fx, self.fy, self.dx, self.dy
 
-    @staticmethod
-    def get_zoom(fx, fy, dx, dy):
-        return 1 / (2 * min([fx / dx, fy / dy, (dx - fx) / dx, (dy - fy) / dy]))
+#     @staticmethod
+#     def get_zoom(fx, fy, dx, dy):
+#         return 1 / (2 * min([fx / dx, fy / dy, (dx - fx) / dx, (dy - fy) / dy]))
 
-    @property
-    def zoom(self):
-        return self.get_zoom(*self.params)  # self.fx, self.fy, self.dx, self.dy)
+#     @property
+#     def zoom(self):
+#         return self.get_zoom(*self.params)  # self.fx, self.fy, self.dx, self.dy)
 
-    @property
-    def x(self):
-        return self.fx - self.dx / 2
+#     @property
+#     def x(self):
+#         return self.fx - self.dx / 2
 
-    @property
-    def y(self):
-        return self.dy / 2 - self.fy
+#     @property
+#     def y(self):
+#         return self.dy / 2 - self.fy
 
-    def wangle(self, angle) -> "Focus":
-        r = min(self.image.dimension_x, self.image.dimension_y) / 4
-        x = self.image.dimension_x / 2 + r * math.cos(angle) * random.random()
-        y = self.image.dimension_y / 2 - r * math.sin(angle) * random.random()
-        f = Focus(self.image)
-        f.fx = x
-        f.fy = y
-        return f  # x, y, self.get_zoom(x,y,self.image.dimension_x, self.image.dimension_y)
+#     def wangle(self, angle) -> "Focus":
+#         r = min(self.image.dimension_x, self.image.dimension_y) / 4
+#         x = self.image.dimension_x / 2 + r * math.cos(angle) * random.random()
+#         y = self.image.dimension_y / 2 - r * math.sin(angle) * random.random()
+#         f = Focus(self.image)
+#         f.fx = x
+#         f.fy = y
+#         return f  # x, y, self.get_zoom(x,y,self.image.dimension_x, self.image.dimension_y)
 
-    @property
-    def csstransform(self) -> str:
-        return (
-            "@keyframes slowpan {"
-            "0% {"
-            f"   transform:translate3d({self.x}px,{self.y}px,0) scale({self.zoom});"
-            "}"
-            "50% {"
-            f"   transform:translate3d(0,0,0) scale(1.1);"
-            "}"
-            "100% {"
-            f"   transform:translate3d(400px,-200px,0) scale(1.5);"
-            "}"
-            "}"
-        )
+#     @property
+#     def csstransform(self) -> str:
+#         return (
+#             "@keyframes slowpan {"
+#             "0% {"
+#             f"   transform:translate3d({self.x}px,{self.y}px,0) scale({self.zoom});"
+#             "}"
+#             "50% {"
+#             f"   transform:translate3d(0,0,0) scale(1.1);"
+#             "}"
+#             "100% {"
+#             f"   transform:translate3d(400px,-200px,0) scale(1.5);"
+#             "}"
+#             "}"
+#         )

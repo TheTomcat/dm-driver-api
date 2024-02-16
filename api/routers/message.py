@@ -6,12 +6,12 @@ from fastapi_pagination import Page
 from typing_extensions import Annotated
 
 import api.models as models
-from api.schemas import Message, MessageCreate, MessageFilter, MessageUpdate
+from api.schemas import Message, MessageCreate, MessageFilter, MessageSortBy, MessageUpdate
 
 # from api.db.schemas.filters import MessageFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
 from api.services import MessageService, get_message_service
-from api.utils.filters import generate_filter_query
+from api.utils.filters import generate_filter_query, generate_sort_query
 from core.db import foreign_key
 
 router = APIRouter(prefix="/message")
@@ -21,10 +21,12 @@ router = APIRouter(prefix="/message")
 async def list_messages(
     message_service: Annotated[MessageService, Depends(get_message_service)],
     message_filter: Annotated[MessageFilter, Depends()],
+    sort_by: Annotated[MessageSortBy, Depends()],
     # current_user: CurrentActiveUser,
 ) -> Page[models.Message]:
     "Get all messages"
     q = generate_filter_query(models.Message, message_filter)
+    q = generate_sort_query(q, models.Message, sort_by)
     return message_service.get_some(q)
 
 

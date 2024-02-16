@@ -39,6 +39,8 @@ def generate_filter_query(model, filter: BaseFilter) -> Select:
                 q = _type_is(q, model, val)
             case "types":
                 q = _type_is_one_of(q, model, val)
+            case "source":
+                q = _source_is_one_of(q, model, val)
             case "combat_participants_at_least":
                 q = _combat_participants_at_least(q, model, val)
             case "combat_participants_at_most":
@@ -47,7 +49,13 @@ def generate_filter_query(model, filter: BaseFilter) -> Select:
                 q = _combat_participants_in_range(q, model, val)
             case "combat_participants_name":
                 q = _combat_participants_name(q, model, val)
+            case "seq":
+                q = _seq_like(q, model, val)
     return q
+
+
+def _seq_like(q: Select, model: Image | Entity, param: str) -> Select:
+    return q.where(model.seq == param)  # type: ignore
 
 
 def _message_like(q: Select, model: Message, param: str) -> Select:
@@ -94,6 +102,10 @@ def _type_is(q: Select, model: Image, param: ImageType) -> Select:
 
 def _type_is_one_of(q: Select, model: Image, params: str) -> Select:
     return q.where(model.type.in_(params.split("|")))  # type: ignore
+
+
+def _source_is_one_of(q: Select, model: Entity, params: str) -> Select:
+    return q.where(model.source.in_(params.split("|")))  # type: ignore
 
 
 def _combat_participants_at_least(q: Select, model: Combat, params: int) -> Select:
@@ -162,6 +174,12 @@ def generate_sort_query(q: Select, model, order: SortBy) -> Select:
             sort_statement = model.initiative_modifier
         case "dimensions":
             sort_statement = model.dimension_x * model.dimension_y
+        case "message":
+            sort_statement = func.lower(model.message)
+        case "source":
+            sort_statement = func.lower(model.source)
+        case "seq":
+            sort_statement = model.seq
     if order.sort_dir == SortOption.desc and sort_statement is not None:
         sort_statement = sort_statement.desc()
     if order.sort_dir != SortOption.NONE and sort_statement is not None:

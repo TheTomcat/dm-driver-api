@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     PROFILE_QUERIES: bool = False
 
     UPLOAD_DIR: str = ""
+    CONVERT_PNG: bool = False
+    GENERATE_THUMBNAIL: bool = False
+    THUMBNAIL_SIZE: int = 200
 
     class Config:
         env_file = ".env"
