@@ -1,6 +1,8 @@
 api/routers/tag.py
 *.pyc
 *.pyo
+test_db.db
+db copy.sqlite
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
