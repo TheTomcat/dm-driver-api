@@ -4,20 +4,21 @@ import os
 import pathlib
 import shutil
 import uuid
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from typing import Annotated, Callable, Iterator, Optional
 
 import typer
 from alembic import command
 from alembic.config import Config
+from PIL import Image as PImage
 from rich import print
 from rich.progress import Progress, track
-from sqlalchemy import insert, select, update
+from sqlalchemy import select, update
 
-from api.models import Combat, Entity, Image, ImageType, Message, Participant, Tag, image_tags
+from api.models import Combat, Entity, Image, ImageType, Message, Participant
 from core.colour import extract_pallete
 from core.session import create_session
-from core.utils import rgb_to_hex
+from core.utils import make_seq, rgb_to_hex
 
 app = typer.Typer()
 
@@ -47,7 +48,7 @@ def make_print(prefix: str, verbose: bool):
 
 
 @app.command()
-def parse_directory(
+def parse_image_directory(
     directory: Annotated[str, typer.Argument()],
     extensions: Annotated[str, typer.Argument(help="Extensions to parse, comma separated")] = "png",
     image_type: Annotated[
@@ -61,8 +62,14 @@ def parse_directory(
     ] = False,
     verbose: Annotated[bool, typer.Option(help="Display detailed debugging")] = False,
     recursive: Annotated[bool, typer.Option(help="Search directories recursively")] = False,
+    attach_entity: Annotated[
+        bool,
+        typer.Option(
+            help="Attempt to attach any images found to entities within the database based on name"
+        ),
+    ] = False,
 ):
-    """Parse a directory for image files, and then store them in the database."""
+    """Parse a directory for image files, and then store them in the database. Optionally attempt to find an entity that matches and link the image to the entity"""
     print, input = make_print("[red]\\[parse-directory][/red]  ", verbose)
 
     if force_reparse:
@@ -86,6 +93,7 @@ def parse_directory(
     if not verbose:
         iterable = track([i for i in iterable], description="Processing...")
     i = 0
+    seq = make_seq()
     for image_path in iterable:
         image = db_session.scalar(
             select(Image).where(
@@ -103,11 +111,17 @@ def parse_directory(
             else:
                 print(" - [yellow]Skipping[/yellow]", np=True)
                 continue
-        new_image = Image.create_from_local_file(image_path, type=image_type)
+        if attach_entity:
+            new_image = Image.create_from_local_file(image_path, type=image_type, seq=seq)
+            e = db_session.scalar(select(Entity).where(Entity.name.ilike(image_path.stem)))
+            if e:
+                e.image = new_image
+        else:
+            new_image = Image.create_from_local_file(image_path, type=image_type, seq=seq)
         db_session.add(new_image)
         i = i + 1
         print(f"Adding image ([yellow]{new_image.type}[/yellow]) at [green]{image_path}[/green]")
-    print(f"{i} images parsed", override=True)
+    print(f"{i} images parsed <Seq={seq}>", override=True)
     db_session.commit()
 
 
@@ -133,6 +147,7 @@ def parse_compendium(
     db_session = create_session()
     with open(compendium_file, "r") as f:
         data = json.load(f)
+    seq = make_seq()
 
     if process_images and image_directory is None:
         process_images = True
@@ -182,6 +197,7 @@ def parse_compendium(
                 source=monster["source"],
                 source_page=monster["page"],
                 data=json.dumps(monster).encode(),
+                seq=seq,
             )
             if process_images and monster.get("hasToken", False) and bestiaryimagepath is not None:
                 datapath = bestiaryimagepath.joinpath(monster["source"].upper())
@@ -191,7 +207,7 @@ def parse_compendium(
                 file = list(datapath.glob(f'{monster.get("name")}*'))
                 if file:
                     file = file[0]
-                    image = Image.create_from_local_file(file, type=ImageType.character)
+                    image = Image.create_from_local_file(file, type=ImageType.character, seq=seq)
                     m.image = image
                     db_session.add(image)
                     j = j + 1
@@ -206,112 +222,112 @@ def parse_compendium(
     db_session.commit()
 
 
-@app.command()
-def add_players():
-    "Add in my players"
-    print, input = make_print("[blue]\[add-players][/blue]       ", True)
-    sess = create_session()
-    image_map = (
-        ("Aggie", "D:\\RPGs\\Campaigns\\2\\Aggie.png"),
-        ("Fran", "D:\\RPGs\\Campaigns\\2\\Fran.png"),
-        ("Sorsha", "D:\\RPGs\\Campaigns\\2\\Sorsha.png"),
-        ("Gil", "D:\\RPGs\\Campaigns\\2\\Gilbert.png"),
-    )
-    players = []
-    for name, image in image_map:
-        i = Image.create_from_local_file(pathlib.Path(image), type="character")
-        e = Entity(name=name, initiative_modifier=0, is_PC=True, image=i)
-        players.append(e)
-        sess.add_all([i, e])
-    sess.commit()
-    return players
+# @app.command()
+# def add_players():
+#     "Add in my players"
+#     print, input = make_print("[blue]\[add-players][/blue]       ", True)
+#     sess = create_session()
+#     image_map = (
+#         ("Aggie", "D:\\RPGs\\Campaigns\\2\\Aggie.png"),
+#         ("Fran", "D:\\RPGs\\Campaigns\\2\\Fran.png"),
+#         ("Sorsha", "D:\\RPGs\\Campaigns\\2\\Sorsha.png"),
+#         ("Gil", "D:\\RPGs\\Campaigns\\2\\Gilbert.png"),
+#     )
+#     players = []
+#     for name, image in image_map:
+#         i = Image.create_from_local_file(pathlib.Path(image), type="character")
+#         e = Entity(name=name, initiative_modifier=0, is_PC=True, image=i)
+#         players.append(e)
+#         sess.add_all([i, e])
+#     sess.commit()
+#     return players
 
 
-@app.command()
-def setup():
-    "Perform a setup for my system"
-    print, input = make_print("[blue]\[sys-setup][/blue]         ", True)
-    images = [
-        # ( ImageType, Path, Recursive Search?, Extensions)
-        ("backdrop", "D:\\RPGs\\Backdrops", False, "png"),
-        ("character", "D:\\RPGs\\Character Images", True, "png,jpg,jpeg"),
-    ]
+# @app.command()
+# def setup():
+#     "Perform a setup for my system"
+#     print, input = make_print("[blue]\[sys-setup][/blue]         ", True)
+#     images = [
+#         # ( ImageType, Path, Recursive Search?, Extensions)
+#         ("backdrop", "D:\\RPGs\\Backdrops", False, "png"),
+#         ("character", "D:\\RPGs\\Character Images", True, "png,jpg,jpeg"),
+#     ]
 
-    compendia = [
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mm.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mtf.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-vgm.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-ftd.json",
-    ]
+#     compendia = [
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mm.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mtf.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-vgm.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-ftd.json",
+#     ]
 
-    players = add_players()
+#     players = add_players()
 
-    for image_type, directory, recursive, extensions in images:
-        parse_directory(directory, extensions, image_type, recursive=recursive)
+#     for image_type, directory, recursive, extensions in images:
+#         parse_directory(directory, extensions, image_type, recursive=recursive)
 
-    for compendium in compendia:
-        parse_compendium(compendium, process_images=True)
+#     for compendium in compendia:
+#         parse_compendium(compendium, process_images=True)
 
-    load_messages("messages.json")
+#     load_messages("messages.json")
 
-    load_tags("tags.json")
+#     load_tags("tags.json")
 
-    build_dummy_data(players)
+#     build_dummy_data(players)
 
-    generate_tags()
-
-
-@app.command()
-def insert_extra_data():
-    compendia = [
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mm.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mtf.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-vgm.json",
-        "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-ftd.json",
-    ]
-    monsters = []
-    for compendium in compendia:
-        with open(compendium) as f:
-            monsters.extend(json.load(f)["monster"])
-
-    q = select(Entity).where(Entity.is_PC != True)  # noqa: E712
-    session = create_session()
-    results = session.scalars(q).all()
-    for result in results:
-        m = next(filter(lambda m: m["name"] == result.name, monsters))
-        if m:
-            print(f'Putting {m["name"]} into {result.name}')
-            result.data = json.dumps(m).encode()
-    session.commit()
+#     generate_tags()
 
 
-@app.command()
-def load_tags(filename):
-    "Load tags from my old version, loading from a json file format [[filename(with extension!), tagname], ...]"
-    print, input = make_print("[red]\[load-tags][/red]        ", True)
-    session = create_session()
-    with open(filename, "r") as f:
-        data = json.load(f)
-    tags: set[str] = set()
-    images: dict[str, Image] = {}
-    for image, tag in data:
-        tags.add(tag)
-        images[image] = session.scalar(select(Image).where(Image.name == image[:-4]))
+# @app.command()
+# def insert_extra_data():
+#     compendia = [
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mm.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-mtf.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-vgm.json",
+#         "D:\\RPGs\\5e.tools\\5etools-mirror-1.github.io-1.142.0\\data\\bestiary\\bestiary-ftd.json",
+#     ]
+#     monsters = []
+#     for compendium in compendia:
+#         with open(compendium) as f:
+#             monsters.extend(json.load(f)["monster"])
 
-    tag_elements: dict[str, Tag] = {}
-    for t in tags:
-        tag_element = session.scalar(select(Tag).where(Tag.tag == t.lower()))
-        if not tag_element:
-            tag_element = Tag(tag=t.lower())
-        tag_elements[t] = tag_element
+#     q = select(Entity).where(Entity.is_PC != True)  # noqa: E712
+#     session = create_session()
+#     results = session.scalars(q).all()
+#     for result in results:
+#         m = next(filter(lambda m: m["name"] == result.name, monsters))
+#         if m:
+#             print(f'Putting {m["name"]} into {result.name}')
+#             result.data = json.dumps(m).encode()
+#     session.commit()
 
-    print(f"Found {len(tag_elements)} tags and {len(images)} images, with {len(data)} operations")
-    session.add_all(tag_elements.values())
 
-    for image, tag in data:
-        images[image].tags.append(tag_elements[tag])
+# @app.command()
+# def load_tags(filename):
+#     "Load tags from my old version, loading from a json file format [[filename(with extension!), tagname], ...]"
+#     print, input = make_print("[red]\[load-tags][/red]        ", True)
+#     session = create_session()
+#     with open(filename, "r") as f:
+#         data = json.load(f)
+#     tags: set[str] = set()
+#     images: dict[str, Image] = {}
+#     for image, tag in data:
+#         tags.add(tag)
+#         images[image] = session.scalar(select(Image).where(Image.name == image[:-4]))
 
-    session.commit()
+#     tag_elements: dict[str, Tag] = {}
+#     for t in tags:
+#         tag_element = session.scalar(select(Tag).where(Tag.tag == t.lower()))
+#         if not tag_element:
+#             tag_element = Tag(tag=t.lower())
+#         tag_elements[t] = tag_element
+
+#     print(f"Found {len(tag_elements)} tags and {len(images)} images, with {len(data)} operations")
+#     session.add_all(tag_elements.values())
+
+#     for image, tag in data:
+#         images[image].tags.append(tag_elements[tag])
+
+#     session.commit()
 
 
 def build_dummy_data(players=None):
@@ -352,37 +368,41 @@ def build_dummy_data(players=None):
     db_session.commit()
 
 
-@app.command()
-def generate_tags():
-    "Look in a folder full of images on my computer and try to guess appropriate tags for them, based on subfolders"
-    print, input = make_print("[cyan]\[generate-tags][/cyan]    ", True)
-    base_path = pathlib.Path("D:\\RPGs\\Character Images\\")
-    db_session = create_session()
+# @app.command()
+# def generate_tags():
+#     "Look in a folder full of images on my computer and try to guess appropriate tags for them, based on subfolders"
+#     print, input = make_print("[cyan]\[generate-tags][/cyan]    ", True)
+#     base_path = pathlib.Path("D:\\RPGs\\Character Images\\")
+#     db_session = create_session()
 
-    images = db_session.scalars(select(Image).where(Image.path.ilike(f"%{base_path}%"))).all()
-    tag_actions = defaultdict(list)
-    for image in track(images):
-        tags = os.path.normpath(pathlib.Path(image.path).relative_to(base_path)).split(os.sep)
-        for tag in tags[:-1]:
-            tag_actions[tag].append(image.id)
-    print(
-        f'Found {len(tag_actions)} tags: \[{", ".join([f"{tag}: {len(im)}" for tag, im in tag_actions.items()])}]'
-    )
-    for tagname, images in tag_actions.items():
-        if tagname.lower() in [
-            "default",  # Not sure why I made a folder called 'default'.
-            "working wolder",
-            "iacac",
-        ]:
-            continue
-        tag = db_session.scalar(select(Tag).where(Tag.tag == tagname.lower()))
-        if not tag:
-            tag = Tag(tagname)
-            db_session.add(tag)
-            db_session.commit()
-        for im_id in images:
-            db_session.execute(insert(image_tags).values(image_id=im_id, tag_id=tag.id))
-    db_session.commit()
+#     images = db_session.scalars(select(Image).where(Image.path.ilike(f"%{base_path}%"))).all()
+#     tag_actions = defaultdict(list)
+#     for image in track(images):
+#         tags = os.path.normpath(pathlib.Path(image.path).relative_to(base_path)).split(os.sep)
+#         for tag in tags[:-1]:
+#             tag_actions[tag].append(image.id)
+#     print(
+#         f'Found {len(tag_actions)} tags: \[{", ".join([f"{tag}: {len(im)}" for tag, im in tag_actions.items()])}]'
+#     )
+#     for tagname, images in tag_actions.items():
+#         if tagname.lower() in [
+#             "default",  # Not sure why I made a folder called 'default'.
+#             "working wolder",
+#             "iacac",
+#         ]:
+#             continue
+#         tag = db_session.scalar(select(Tag).where(Tag.tag == tagname.lower()))
+#         if not tag:
+#             tag = Tag(tagname)
+#             db_session.add(tag)
+#             db_session.commit()
+#         for im_id in images:
+#             db_session.execute(insert(image_tags).values(image_id=im_id, tag_id=tag.id))
+#     db_session.commit()
+
+action_row = namedtuple(
+    "action_row", ("image_id", "old_path", "new_path", "size", "action")
+)  #  'new_name', 'extension', 'type',
 
 
 @app.command()
@@ -398,39 +418,62 @@ def package(
             help="Sort images based on their type (backdrop, character etc) into different folders."
         ),
     ] = False,
+    create_dir: Annotated[bool, typer.Option(help="Create directory if it does not exist")] = True,
+    blind: Annotated[
+        bool, typer.Option(help="Run operations without committing changes to the database")
+    ] = False,
 ):
     """Package the database and images to transfer them to another location. Warning, this could take a while"""
     print, input = make_print("[red]\[package][/red]        ", True)
     output_directory = pathlib.Path(directory)
-    if not output_directory.is_dir():
+    if not output_directory.is_dir() and not create_dir:
         print(f"Invalid output directory {directory}")
         return
+    elif not output_directory.is_dir() and create_dir:
+        os.mkdir(output_directory)
+    if use_subdir:
+        for subdir_stub in ImageType:
+            subdir = output_directory.joinpath(subdir_stub.name)
+            if not subdir.is_dir() and create_dir:
+                os.mkdir(output_directory.joinpath(subdir.name))
+            elif not subdir.is_dir():
+                print(f"Invalid output directory {subdir}")
+                return
 
     db_session = create_session()
     images = db_session.scalars(select(Image)).all()
     actions = []
     total_size = 0
-    action_row = namedtuple(
-        "action_row", ("image_id", "old_path", "new_path", "size")
-    )  #  'new_name', 'extension', 'type',
+
     for image in track(images, description="Parsing images..."):
         old_path = pathlib.Path(image.path)
         if not old_path.exists():
             print(f"Error parsing <Image id={image.id}>, not found at location {image.path}")
-        size = os.path.getsize(image.path)
+        size = os.path.getsize(old_path)
         new_name = uuid.uuid4()
-        extension = image.path.split(".")[-1]  # CONVERT_PNG: #if not convert_png else 'png'
+        extension = (
+            old_path.suffix
+        )  # image.path.split(".")[-1]  # CONVERT_PNG: #if not convert_png else 'png'
+        convert_image = convert_png and extension != ".png"
+        if use_subdir:
+            new_path = output_directory.joinpath(
+                str(image.type.name)
+            )  # .joinpath(f"{new_name}{extension}")
+        else:
+            new_path = output_directory
+        new_path = new_path.joinpath(f"{new_name}{'.png' if convert_image else extension}")
         actions.append(
             action_row(
                 image_id=image.id,
                 old_path=old_path,
-                new_path=output_directory.joinpath(f"{new_name}.{extension}"),
+                new_path=new_path,
                 size=size,
+                action="convert" if convert_image else "copy",
             )
         )
         total_size += size
     i = input(
-        f"{len(actions)} files will now be migrated, total {total_size/1000000:.2f} MBi. Contine? \[y/N] "
+        f"{len(actions)} files will now be {'blindly ' if blind else ''}migrated, total {total_size/1000000:.2f} MBi. Contine? \[y/N] "
     )
     if i.lower() != "y":
         print("Aborting...")
@@ -439,15 +482,56 @@ def package(
     with Progress() as progress:
         num_files = progress.add_task("[red]Number of files...", total=len(actions))
         total_size = progress.add_task("[green]Total filesize...", total=total_size)
-        for image_id, old_path, new_path, size in actions:
+
+        # Multiprocessing options
+        # pool = Pool(8)
+        # gen = partial(
+        #     perform_operation,
+        #     blind=blind,
+        #     # session=db_session,
+        #     # progress=progress,
+        #     # num_files=num_files,
+        #     # total_size=total_size,
+        # )
+        # results = pool.map(gen, actions)
+
+        for image_id, old_path, new_path, size, action in actions:
             count += 1
-            shutil.copy(old_path, new_path)
-            q = update(Image).where(Image.id == image_id).values(path=str(new_path))
-            db_session.execute(q)
+            if action == "copy":
+                shutil.copy(old_path, new_path)
+            else:
+                with PImage.open(old_path) as f:
+                    f.save(new_path)
+
+            if not blind:
+                q = update(Image).where(Image.id == image_id).values(path=str(new_path))
+                db_session.execute(q)
             progress.update(num_files, advance=1)
             progress.update(total_size, advance=size)
     print(f'{count} images migrated, totalling {total_size/1000000:.2f} MBi."')
-    db_session.commit()
+    if not blind:
+        db_session.commit()
+
+
+def perform_operation(
+    opr,
+    blind: bool,
+    # session: scoped_session,
+    # progress: Progress,
+    # num_files: TaskID,
+    # total_size: TaskID,
+):
+    image_id, old_path, new_path, size, action = opr
+    if action == "copy":
+        shutil.copy(old_path, new_path)
+    else:
+        with PImage.open(old_path) as f:
+            f.save(new_path)
+    # if not blind:
+    # q = update(Image).where(Image.id == image_id).values(path=str(new_path))
+    # session.execute(q)
+    # progress.update(num_files, advance=1)
+    # progress.update(total_size, advance=size)
 
 
 @app.command()
@@ -526,7 +610,7 @@ def reset(
     os.remove("db.sqlite")
     migrate("initial migration")
     upgrade()
-    setup()
+    # setup()
 
 
 def find_max(data, index):
