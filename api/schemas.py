@@ -601,6 +601,73 @@ class Combat(CombatBase):
         from_attributes=True, alias_generator=combat_alias, populate_by_name=True
     )
 
+
+########################## Rolltables
+rolltable_alias = camel_alias_generator("rolltable")
+rolltable_row_alias = camel_alias_generator("rolltable_row")
+# rolltable_row_data_alias = camel_alias_generator("rolltable_row_data")
+
+
+class RollTableRowData(BaseModel):
+    data: str
+
+
+class RollTableRowBase(BaseModel):
+    name: str
+    display_name: str
+    weight: int = 1
+    category: Optional[str] = None
+    extra_data: Optional[list["RollTableRowData"]] = None
+    model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
+
+
+class RollTableRowUpdate(BaseModel):
+    name: Optional[str] = None
+    display_name: Optional[str] = None
+    weight: Optional[int] = None
+    category: Optional[str] = None
+    extra_data: Optional[list["RollTableRowData"]] = None
+
+
+class RollTableRowCreate(BaseModel):
+    rolltable_id: int
+    name: str
+    display_name: str
+    weight: int = 1
+    category: Optional[str] = None
+    extra_data: Optional[list["RollTableRowData"]] = None
+    model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
+
+
+class RollTableRow(RollTableRowBase):
+    id: foreign_key
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=rolltable_row_alias, populate_by_name=True
+    )
+
+
+class RollTableBase(BaseModel):
+    name: str
+    rows: list["RollTableRowBase"]
+    # title: str  # = ""
+    # active_participant_id: Optional[int] = None
+    # is_active: Optional[bool] = False
+
+    model_config = ConfigDict(alias_generator=rolltable_alias, populate_by_name=True)
+
+
+class RollTableUpdate(BaseModel):
+    name: Optional[str] = None
+    rows: Optional[list["RollTableRowUpdate"]] = None
+
+
+class RollTable(RollTableBase):
+    id: foreign_key
+    rows: list["RollTableRow"]
+    model_config = ConfigDict(
+        from_attributes=True, alias_generator=rolltable_alias, populate_by_name=True
+    )
+
     # @model_validator(mode="before")
     # @classmethod
     # def convert_to_json(cls, data):
@@ -617,7 +684,7 @@ class Combat(CombatBase):
 
 
 ###################### Session
-session_alias = camel_alias_generator("session")
+# session_alias = camel_alias_generator("session")
 
 
 # class aSessionBase(BaseModel):
@@ -666,135 +733,135 @@ session_alias = camel_alias_generator("session")
 #     error: Any
 
 
-class SessionEmpty(BaseModel):
-    mode: Literal["empty"] = "empty"
-    title: str = ""
+# class SessionEmpty(BaseModel):
+#     mode: Literal["empty"] = "empty"
+#     title: str = ""
 
-    model_config = ConfigDict(
-        from_attributes=True, alias_generator=session_alias, populate_by_name=True
-    )
-
-
-class SessionBackdrop(SessionEmpty):
-    mode: Literal["backdrop"]
-    backdrop_id: Optional[foreign_key]
+#     model_config = ConfigDict(
+#         from_attributes=True, alias_generator=session_alias, populate_by_name=True
+#     )
 
 
-class SessionLoading(SessionBackdrop):
-    mode: Literal["loading"]
-    message_id: Optional[foreign_key]
+# class SessionBackdrop(SessionEmpty):
+#     mode: Literal["backdrop"]
+#     backdrop_id: Optional[foreign_key]
 
 
-class SessionCombat(SessionBackdrop):
-    mode: Literal["combat"]
-    combat_id: foreign_key
+# class SessionLoading(SessionBackdrop):
+#     mode: Literal["loading"]
+#     message_id: Optional[foreign_key]
 
 
-class SessionHandout(SessionBackdrop):
-    mode: Literal["handout"]
-    overlay_image_id: foreign_key
+# class SessionCombat(SessionBackdrop):
+#     mode: Literal["combat"]
+#     combat_id: foreign_key
 
 
-class SessionMap(SessionHandout):
-    mode: Literal["map"]
+# class SessionHandout(SessionBackdrop):
+#     mode: Literal["handout"]
+#     overlay_image_id: foreign_key
 
 
-SessionCreate = (
-    SessionEmpty | SessionBackdrop | SessionLoading | SessionCombat | SessionHandout | SessionMap
-)
-##############################################
+# class SessionMap(SessionHandout):
+#     mode: Literal["map"]
 
 
-class SessionUpdate(BaseModel):
-    mode: Literal["empty"] | Literal["loading"] | Literal["backdrop"] | Literal[
-        "overlay"
-    ] | Literal["map"] = "empty"
-    title: Optional[str] = ""
-    backdrop_id: Optional[foreign_key] = None
-    combat_id: Optional[foreign_key] = None
-    message_id: Optional[foreign_key] = None
-    overlay_image_id: Optional[foreign_key] = None
-
-    model_config = ConfigDict(
-        from_attributes=True, alias_generator=session_alias, populate_by_name=True
-    )
+# SessionCreate = (
+#     SessionEmpty | SessionBackdrop | SessionLoading | SessionCombat | SessionHandout | SessionMap
+# )
+# ##############################################
 
 
-##############################################
-class SessionEmptyId(BaseModel):
-    mode: Literal["empty"]
-    title: str = ""
-    id: foreign_key
-    ws_url: str
+# class SessionUpdate(BaseModel):
+#     mode: Literal["empty"] | Literal["loading"] | Literal["backdrop"] | Literal[
+#         "overlay"
+#     ] | Literal["map"] = "empty"
+#     title: Optional[str] = ""
+#     backdrop_id: Optional[foreign_key] = None
+#     combat_id: Optional[foreign_key] = None
+#     message_id: Optional[foreign_key] = None
+#     overlay_image_id: Optional[foreign_key] = None
 
-    model_config = ConfigDict(
-        from_attributes=True, alias_generator=session_alias, populate_by_name=True
-    )
-
-
-class SessionBackdropId(SessionEmptyId):
-    mode: Literal["backdrop"]
-    backdrop: "ImageURL"
-    backdrop_id: foreign_key
+#     model_config = ConfigDict(
+#         from_attributes=True, alias_generator=session_alias, populate_by_name=True
+#     )
 
 
-class SessionLoadingId(SessionBackdropId):
-    mode: Literal["loading"]
-    message: "Message"
-    message_id: foreign_key
+# ##############################################
+# class SessionEmptyId(BaseModel):
+#     mode: Literal["empty"]
+#     title: str = ""
+#     id: foreign_key
+#     ws_url: str
+
+#     model_config = ConfigDict(
+#         from_attributes=True, alias_generator=session_alias, populate_by_name=True
+#     )
 
 
-class SessionCombatId(SessionBackdropId):
-    mode: Literal["combat"]
-    combat: "Combat"
-    combat_id: foreign_key
+# class SessionBackdropId(SessionEmptyId):
+#     mode: Literal["backdrop"]
+#     backdrop: "ImageURL"
+#     backdrop_id: foreign_key
 
 
-class SessionHandoutId(SessionBackdropId):
-    mode: Literal["handout"]
-    overlay_image: "ImageURL"
-    overlay_image_id: foreign_key
+# class SessionLoadingId(SessionBackdropId):
+#     mode: Literal["loading"]
+#     message: "Message"
+#     message_id: foreign_key
 
 
-class SessionMapId(SessionHandoutId):
-    mode: Literal["map"]
+# class SessionCombatId(SessionBackdropId):
+#     mode: Literal["combat"]
+#     combat: "Combat"
+#     combat_id: foreign_key
 
 
-Session = (
-    SessionEmptyId
-    | SessionBackdropId
-    | SessionLoadingId
-    | SessionCombatId
-    | SessionHandoutId
-    | SessionMapId
-)
-
-################################
+# class SessionHandoutId(SessionBackdropId):
+#     mode: Literal["handout"]
+#     overlay_image: "ImageURL"
+#     overlay_image_id: foreign_key
 
 
-class WSEventType(enum.Enum):
-    session_updated = "session_updated"
-    show_message = "show_message"
+# class SessionMapId(SessionHandoutId):
+#     mode: Literal["map"]
 
 
-class WSEventUpdate(BaseModel):
-    event: Literal[WSEventType.session_updated]
-    paylod: None
+# Session = (
+#     SessionEmptyId
+#     | SessionBackdropId
+#     | SessionLoadingId
+#     | SessionCombatId
+#     | SessionHandoutId
+#     | SessionMapId
+# )
+
+# ################################
 
 
-class _WSEventMessagePayload(BaseModel):
-    message: str
-    timeout: Optional[int]
+# class WSEventType(enum.Enum):
+#     session_updated = "session_updated"
+#     show_message = "show_message"
 
 
-class WSEventMessage(BaseModel):
-    event: Literal[WSEventType.show_message]
-    payload: _WSEventMessagePayload
+# class WSEventUpdate(BaseModel):
+#     event: Literal[WSEventType.session_updated]
+#     paylod: None
 
 
-WSEvent = WSEventUpdate | WSEventMessage
+# class _WSEventMessagePayload(BaseModel):
+#     message: str
+#     timeout: Optional[int]
 
 
-class WSPub(BaseModel):
-    channel: int
-    event: WSEvent
+# class WSEventMessage(BaseModel):
+#     event: Literal[WSEventType.show_message]
+#     payload: _WSEventMessagePayload
+
+
+# WSEvent = WSEventUpdate | WSEventMessage
+
+
+# class WSPub(BaseModel):
+#     channel: int
+#     event: WSEvent

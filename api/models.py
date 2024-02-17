@@ -13,7 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import BLOB
 
 from core.colour import extract_pallete
-from core.db import Base
+from core.db import Base, str64, str64_i, str100
 from core.utils import extract_AC, extract_CR, make_seq, rgb_to_hex, roll
 
 image_tags = Table(
@@ -29,10 +29,6 @@ image_entities = Table(
     Column("image_id", ForeignKey("images.id"), primary_key=True),
     Column("entity_id", ForeignKey("entities.id"), primary_key=True),
 )
-
-# image_favourites = Table(
-#     "image_favourites", Base.metadata, Column("image_id", ForeignKey("images.id"), primary_key=True)
-# )
 
 image_collections = Table(
     "image_collections",
@@ -78,13 +74,13 @@ class Image(Base):
         back_populates="images", secondary=image_collections
     )
 
-    entities: Mapped[list["Entity"]] = relationship(back_populates="image")
+    entities: Mapped[list["Entity"]] = relationship(
+        back_populates="image"
+    )  # secondary=image_entities for N:N
 
     seq: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    # mode: Mapped[ImageFileMode] = mapped_column(default=ImageFileMode.local)
-    # entities: Mapped['Entity'] = relationship(back_populates="images", secondary=image_entities)
 
-    # origin: Mapped[ImageOrigin] = mapped_column(default=ImageOrigin.cli)
+    # mode: Mapped[ImageFileMode] = mapped_column(default=ImageFileMode.local)
     # attribution: Mapped[str] = mapped_column(String(50))
 
     @classmethod
@@ -281,6 +277,54 @@ class Collection(Base):
         back_populates="collections", secondary=image_collections
     )
 
+
+class RollTable(Base):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str64_i]
+    rows: Mapped[list["RollTableRow"]] = relationship(back_populates="rolltable")
+
+
+class RollTableRow(Base):
+    __tablename__ = "rolltable_rows"  # type: ignore
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str64_i]
+    display_name: Mapped[str64]
+    weight: Mapped[int] = mapped_column(default=1)
+    category: Mapped[str100] = mapped_column(
+        nullable=True
+    )  # slash-delimited 'path' - e.g. inn/fancy/
+
+    rolltable_id: Mapped[int] = mapped_column(ForeignKey("rolltables.id"))
+    rolltable: Mapped["RollTable"] = relationship(back_populates="rows")
+
+    extra_data: Mapped[list["RollTableRowExtra"]] = relationship(back_populates="row")
+
+    @classmethod
+    def from_path(cls, rolltable: RollTable, path: str, sep: str = "/") -> "RollTableRow":
+        *category, display_name = path.split(sep)
+        display_name = display_name.lower()
+        if display_name.startswith(("the ", "a ")):
+            first_word, *remainder = display_name.split(" ")
+            name = f'{" ".join(remainder)}, {first_word.title()}'
+        return cls(
+            rolltable=rolltable, category=sep.join(category), display_name=display_name, name=name
+        )
+
+
+class RollTableRowExtra(Base):
+    __tablename__ = "rolltable_row_data"  # type: ignore
+    id: Mapped[int] = mapped_column(primary_key=True)
+    data: Mapped[str] = mapped_column(String(500), insert_default="")
+    rolltable_row_id: Mapped["RollTableRow"] = mapped_column(ForeignKey("rolltable_rows.id"))
+    row: Mapped["RollTableRow"] = relationship(back_populates="extra_data")
+
+
+# What I want to be able to do:
+# Type in a text field something like {@roll inn} or {@roll race/humanoid} {@roll monster/cr14} ???
+# and then generate some response.
+#
+# The frontend would then retrieve rolltable inn and select a random element from the table.
+#
 
 # class Favourite(Base):
 #     pass

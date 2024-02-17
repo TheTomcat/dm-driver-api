@@ -14,13 +14,9 @@ from sqlalchemy.orm import Session
 from api.models import Image, Tag, image_collections, image_tags
 from api.schemas import ImageB64, ImageCreate, ImageMatchResult, ImageScale, ImageUpdate, ImageURL
 from api.utils.image_helper import calculate_thumbnail_size, get_image_as_base64
-from config import get_settings
+from config import Settings
 
 from .base import BaseService
-
-settings = get_settings()
-
-# UPLOAD_DIR = Path("C:\\dev\\test")
 
 
 class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
@@ -49,13 +45,6 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
             )
         self.db_session.commit()
         return self.get(image_id)
-        # image = self.get(image_id)
-        # tag = self.db_session.scalar(select(Tag).where(Tag.id == tag_id))
-        # if not tag:
-        #     raise HTTPException(status_code=404, detail=f"<Tag id={tag_id}> not found.")
-        # image.tags.append(tag)
-        # self.db_session.commit()
-        # return image
 
     def remove_tag(self, image_id, tag_id) -> Image:
         try:
@@ -75,16 +64,6 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
             )
         self.db_session.commit()
         return self.get(image_id)
-        # image = self.get(image_id)
-        # tag = self.db_session.scalar(select(Tag).where(Tag.id == tag_id))
-        # if not tag:
-        #     raise HTTPException(status_code=404, detail=f"<Tag id={tag_id}> not found.")
-        # try:
-        #     image.tags.remove(tag)
-        # except ValueError:
-        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
-        # self.db_session.commit()
-        # return image
 
     def set_tags(self, image_id, tags: list[int]) -> Image:
         image = self.get(image_id)
@@ -184,37 +163,6 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
         q = q.join(s, s.c.id == Image.id)
         return paginate(self.db_session, q, transformer=transformer)
 
-    #     q = (
-    #         select(
-    #             Image,
-    #             #                image_tags.c.image_id.label("match_id"),
-    #             func.count(image_tags.c.image_id).label("match_count"),
-    #             #                func.aggregate_strings(image_tags.c.tag_id, ",").label("tags"),
-    #         )
-    #         .join(Image, Image.id == image_tags.c.image_id)
-    #         .where(image_tags.c.tag_id.in_(taglist))
-    #         .group_by(image_tags.c.image_id)
-    #         .order_by(text("match_count DESC"))
-    #         # .limit(12)
-    #     )
-    #     # results = self.db_session.execute(q).all()
-    #     return paginate(self.db_session, q, transformer=transformer)
-
-    # ImageMatchResult(
-    #         **{
-    #             "matches": [
-    #                 {
-    #                     "image": transformer(res[0]),
-    #                     "image_id": res[1],
-    #                     "match_count": res[2],
-    #                     "tags": res[3].split(","),
-    #                 }
-    #                 for res in results
-    #             ],
-    #             "tags": taglist,
-    #         }
-    #     )
-
     def get_full_image(self, image_id: int) -> FileResponse:
         image = self.get(image_id)
         try:
@@ -258,12 +206,7 @@ class ImageService(BaseService[Image, ImageCreate, ImageUpdate]):
                 detail=f"An error occured. Perhaps the image path is invalid. {image.path}",
             )
 
-    async def upload_image(
-        self, image_file: UploadFile
-    ):  # , image_name: str, image_type: ImageType):
-        # filename = image_file.filename
-        # extension = filename.split('.')[1]
-        # print(UPLOAD_DIR)
+    async def upload_image(self, image_file: UploadFile, settings: Settings):
         data = await image_file.read()
         name = image_file.filename if image_file.filename is not None else str(uuid4())
         path = Path(settings.UPLOAD_DIR) / name

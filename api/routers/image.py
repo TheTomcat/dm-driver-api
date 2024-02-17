@@ -19,6 +19,7 @@ from api.schemas import (
 )
 from api.services import ImageService, get_image_service
 from api.utils.filters import generate_filter_query, generate_sort_query
+from config import Settings, get_settings
 
 # from core.colour import put_pallete_into_db
 from core.db import foreign_key
@@ -151,9 +152,10 @@ async def upload_image(
     # image_name: str,
     # image_type: models.ImageType,
     image_service: Annotated[ImageService, Depends(get_image_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
     # background_tasks: BackgroundTasks,
 ):
-    i = await image_service.upload_image(image_file)  # , image_name, image_type)
+    i = await image_service.upload_image(image_file, settings)  # , image_name, image_type)
     # background_tasks.add_task(put_pallete_into_db, i, image_service.db_session)
 
     return i

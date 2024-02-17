@@ -4,6 +4,38 @@ import re
 from datetime import date, datetime
 from typing import Optional, Union
 
+OMITTED_WORDS = [
+    "a",
+    "and",
+    "as",
+    "at",
+    "but",
+    "by",
+    "for",
+    "from",
+    "if",
+    "in",
+    "into",
+    "like",
+    "near",
+    "nor",
+    "of",
+    "off",
+    "on",
+    "once",
+    "onto",
+    "or",
+    "over",
+    "so",
+    "than",
+    "that",
+    "to",
+    "upon",
+    "when",
+    "with",
+    "yet",
+]
+
 
 # https://towardsdatascience.com/detection-of-duplicate-images-using-image-hash-functions-4d9c53f04a75
 def to_camel(string: str) -> str:
@@ -173,3 +205,12 @@ def extract_CR(c: dict) -> float | None:
     if isinstance(cr, str):
         return encodeCR(cr)
     return encodeCR(cr.get("cr"))
+
+
+def title_case(title: str) -> str:
+    words = title.split(" ")
+    new_title = [
+        word.capitalize() if word.lower() not in OMITTED_WORDS else word.lower() for word in words
+    ]
+    new_title[0].capitalize()
+    return " ".join(new_title)
