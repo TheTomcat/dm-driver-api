@@ -6,8 +6,7 @@ from sqlalchemy import select
 from typing_extensions import Annotated
 
 import api.models as models
-from api.schemas import RollTable, RollTableUpdate
-from api.schemas import RollTableBase as RollTableCreate
+from api.schemas import RollTableCreate, RollTableDB, RollTableUpdate
 
 # from api.db.schemas.filters import RollTableFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
@@ -17,7 +16,7 @@ from core.db import foreign_key
 router = APIRouter(prefix="/rolltable")
 
 
-@router.get("/", response_model=Page[RollTable], tags=["rolltables"])
+@router.get("/", response_model=Page[RollTableDB], tags=["rolltables"])
 async def list_rolltables(
     rolltable_service: Annotated[RollTableService, Depends(get_rolltable_service)],
     # rolltable_filter: Annotated[RollTableFilter, Depends()],
@@ -38,7 +37,7 @@ async def list_rolltables(
 
 @router.get(
     "/{rolltable_id}",
-    response_model=RollTable,
+    response_model=RollTableDB,
     responses={404: {"description": "RollTable not found"}},
     tags=["rolltables"],
 )
@@ -53,7 +52,7 @@ async def get_rolltable(
 
 @router.post(
     "/",
-    response_model=RollTable,
+    response_model=RollTableDB,
     status_code=201,
     responses={409: {"description": "Conflict Error"}},
     tags=["rolltables"],
@@ -77,7 +76,7 @@ async def delete_rolltable(
     return Response(status_code=204)
 
 
-@router.patch("/{rolltable_id}", response_model=RollTable, tags=["rolltables"])
+@router.patch("/{rolltable_id}", response_model=RollTableDB, tags=["rolltables"])
 async def update_rolltable(
     rolltable_id: foreign_key,
     rolltable: RollTableUpdate,

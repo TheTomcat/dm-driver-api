@@ -6,8 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
 from api.models import RollTable, RollTableRow, RollTableRowExtra
-from api.schemas import RollTableBase as RollTableCreate
-from api.schemas import RollTableRowBase, RollTableRowCreate, RollTableRowUpdate, RollTableUpdate
+from api.schemas import (
+    RollTableCreate,
+    RollTableRowCreate,
+    RollTableRowCreateInTable,
+    RollTableRowUpdate,
+    RollTableUpdate,
+)
 
 from .base import BaseService
 
@@ -30,7 +35,7 @@ class RollTableService(BaseService[RollTable, RollTableCreate, RollTableUpdate])
                 raise HTTPException(status_code=409, detail="Conflict error")
         return rolltable_obj
 
-    def create_row(self, rolltablerow: RollTableRowBase, push_to_db=True) -> RollTableRow:
+    def create_row(self, rolltablerow: RollTableRowCreateInTable, push_to_db=True) -> RollTableRow:
         rolltable_row_obj = RollTableRow(
             name=rolltablerow.name,
             display_name=rolltablerow.display_name
@@ -60,13 +65,17 @@ class RollTableService(BaseService[RollTable, RollTableCreate, RollTableUpdate])
         for column, value in model_dump.items():
             if column == "rows":
                 try:
-                    for row in model_dump[column]:
-                        row_obj = self.db_session.scalar(
-                            select(RollTableRow).where(RollTableRow.id == row["id"])
-                        )
-                        for col, val in row.items():
-                            if col != "id":
-                                setattr(row_obj, col, val)
+                    for row in model_dump[column]:  # loop over rolltablerow elements
+                        if "id" in row:  # If the row already exists
+                            row_obj = self.db_session.scalar(
+                                select(RollTableRow).where(RollTableRow.id == row["id"])
+                            )
+                            for col, val in row.items():
+                                if col != "id":
+                                    setattr(row_obj, col, val)
+                        else:  # If the row does not exist
+                            row_obj = self.create_row(row, push_to_db=False)
+                            db_obj.rows.append(row_obj)
                 except Exception as e:
                     raise e
             else:

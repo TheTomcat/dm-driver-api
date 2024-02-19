@@ -1,13 +1,7 @@
 import enum
 from typing import Annotated, Literal, Optional
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    StringConstraints,
-    ValidationError,
-    model_validator,
-)
+from pydantic import BaseModel, ConfigDict, StringConstraints, ValidationError, model_validator
 from typing_extensions import Self
 
 from api.models import ImageType
@@ -612,6 +606,10 @@ class RollTableRowData(BaseModel):
     data: str
 
 
+# class RollTableRowDataDB(RollTableRowData):
+#     id: int
+
+
 class RollTableRowBase(BaseModel):
     name: str
     display_name: str
@@ -629,18 +627,22 @@ class RollTableRowUpdate(BaseModel):
     extra_data: Optional[list["RollTableRowData"]] = None
 
 
-class RollTableRowCreate(BaseModel):
+class RollTableRowCreate(RollTableRowBase):
     rolltable_id: int
-    name: str
-    display_name: str
-    weight: int = 1
-    category: Optional[str] = None
-    extra_data: Optional[list["RollTableRowData"]] = None
+
     model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
 
 
-class RollTableRow(RollTableRowBase):
+class RollTableRowCreateInTable(RollTableRowBase):
+    pass
+
+
+# model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
+
+
+class RollTableRowDB(RollTableRowBase):
     id: foreign_key
+    rolltable_id: int
     model_config = ConfigDict(
         from_attributes=True, alias_generator=rolltable_row_alias, populate_by_name=True
     )
@@ -658,12 +660,17 @@ class RollTableBase(BaseModel):
 
 class RollTableUpdate(BaseModel):
     name: Optional[str] = None
-    rows: Optional[list["RollTableRowUpdate"]] = None
+    rows: Optional[list["RollTableRowUpdate | RollTableRowCreate"]] = None
 
 
-class RollTable(RollTableBase):
+class RollTableCreate(BaseModel):
+    name: str
+    rows: list["RollTableRowCreateInTable"] = []
+
+
+class RollTableDB(RollTableBase):
     id: foreign_key
-    rows: list["RollTableRow"]
+    rows: list["RollTableRowDB"]
     model_config = ConfigDict(
         from_attributes=True, alias_generator=rolltable_alias, populate_by_name=True
     )
