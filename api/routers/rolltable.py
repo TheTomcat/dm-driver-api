@@ -6,7 +6,7 @@ from sqlalchemy import select
 from typing_extensions import Annotated
 
 import api.models as models
-from api.schemas import RollTableCreate, RollTableDB, RollTableUpdate
+from api.schemas import RollTableCreate, RollTableDB, RollTableRowCreateInTable, RollTableUpdate
 
 # from api.db.schemas.filters import RollTableFilter, generate_filter_query
 # from api.deps import CurrentActiveUser
@@ -84,3 +84,21 @@ async def update_rolltable(
     # current_user: CurrentActiveUser,
 ) -> Optional[models.RollTable]:
     return rolltable_service.update(rolltable_id, rolltable)
+
+
+@router.post("/{rolltable_id}/row/add", response_model=RollTableDB, tags=["rolltables"])
+async def create_row_on_rolltable(
+    rolltable_id: foreign_key,
+    rolltable_row: RollTableRowCreateInTable,
+    rolltable_service: Annotated[RollTableService, Depends(get_rolltable_service)],
+) -> models.RollTable:
+    return rolltable_service.add_row_to_table(rolltable_id, rolltable_row)
+
+
+@router.delete("/row/{rolltable_row_id}/remove", response_model=RollTableDB, tags=["rolltables"])
+async def delete_row_from_rolltable(
+    rolltable_row_id: foreign_key,
+    rolltable_service: Annotated[RollTableService, Depends(get_rolltable_service)],
+):
+    rolltable_service.delete(rolltable_row_id)
+    return Response(status_code=204)

@@ -281,7 +281,10 @@ class Collection(Base):
 class RollTable(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str64_i]
-    rows: Mapped[list["RollTableRow"]] = relationship(back_populates="rolltable")
+    rows: Mapped[list["RollTableRow"]] = relationship(
+        back_populates="rolltable",
+        cascade="all,delete-orphan",
+    )
 
 
 class RollTableRow(Base):
@@ -297,7 +300,10 @@ class RollTableRow(Base):
     rolltable_id: Mapped[int] = mapped_column(ForeignKey("rolltables.id"))
     rolltable: Mapped["RollTable"] = relationship(back_populates="rows")
 
-    extra_data: Mapped[list["RollTableRowExtra"]] = relationship(back_populates="row")
+    extra_data: Mapped[list["RollTableRowExtra"]] = relationship(
+        back_populates="row",
+        cascade="all,delete-orphan",
+    )
 
     @classmethod
     def from_path(cls, rolltable: RollTable, path: str, sep: str = "/") -> "RollTableRow":

@@ -612,7 +612,7 @@ class RollTableRowData(BaseModel):
 
 class RollTableRowBase(BaseModel):
     name: str
-    display_name: str
+    # display_name: str
     weight: int = 1
     category: Optional[str] = None
     extra_data: Optional[list["RollTableRowData"]] = None
@@ -620,28 +620,26 @@ class RollTableRowBase(BaseModel):
 
 
 class RollTableRowUpdate(BaseModel):
+    rolltable_row_id: int
     name: Optional[str] = None
-    display_name: Optional[str] = None
+    # display_name: Optional[str] = None
     weight: Optional[int] = None
     category: Optional[str] = None
     extra_data: Optional[list["RollTableRowData"]] = None
 
 
-class RollTableRowCreate(RollTableRowBase):
+class RollTableRowCreateStandalone(RollTableRowBase):
     rolltable_id: int
-
     model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
 
 
-class RollTableRowCreateInTable(RollTableRowBase):
+class RollTableRowCreateInTable(RollTableRowBase):  #
     pass
 
 
-# model_config = ConfigDict(alias_generator=rolltable_row_alias, populate_by_name=True)
-
-
-class RollTableRowDB(RollTableRowBase):
+class RollTableRowDB(RollTableRowBase):  # Contains everything
     id: foreign_key
+    display_name: str
     rolltable_id: int
     model_config = ConfigDict(
         from_attributes=True, alias_generator=rolltable_row_alias, populate_by_name=True
@@ -660,7 +658,7 @@ class RollTableBase(BaseModel):
 
 class RollTableUpdate(BaseModel):
     name: Optional[str] = None
-    rows: Optional[list["RollTableRowUpdate | RollTableRowCreate"]] = None
+    rows: Optional[list["RollTableRowUpdate | RollTableRowCreateInTable"]] = None
 
 
 class RollTableCreate(BaseModel):

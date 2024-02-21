@@ -208,9 +208,36 @@ def extract_CR(c: dict) -> float | None:
 
 
 def title_case(title: str) -> str:
+    "Capitalise all words except those in OMITTED_WORDS. Does not handle multiple sentences (yet?)"
     words = title.split(" ")
-    new_title = [
-        word.capitalize() if word.lower() not in OMITTED_WORDS else word.lower() for word in words
-    ]
-    new_title[0].capitalize()
+    new_title = [choose_case(word) for word in words]
+    new_title[0] = new_title[0].capitalize()
     return " ".join(new_title)
+
+
+def choose_case(word: str) -> str:
+    "Attempt to format the correct case for the word."
+    if word.upper() == word:  # Leave all uppercase words as uppercase
+        return word
+    if word.lower() in OMITTED_WORDS:
+        return word.lower()
+    return word.capitalize()
+
+
+def make_sortable_name(name: str) -> str:
+    """Take a name that is already correctly capitalised, then format it so that unimportant
+    words are at the end. Unimportant words are in OMITTED_WORDS.
+    'The Horse and Barrel' => 'Horse and Barrel, The'
+    """
+    words = name.split(" ")
+    break_at = 0
+    for i, word in enumerate(words):
+        if word.lower() not in OMITTED_WORDS:
+            break_at = i
+            break
+    if break_at > 0:
+        new_words = words[break_at:]
+        new_words[-1] += ","
+        new_words += words[0:break_at]
+        return " ".join(new_words)
+    return " ".join(words)
